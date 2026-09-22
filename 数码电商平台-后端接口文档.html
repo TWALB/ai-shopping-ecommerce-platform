@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数码电商平台后端接口文档</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #1e293b; }
+  header { background: #0f172a; color: #fff; padding: 22px 28px; }
+  header h1 { font-size: 22px; margin-bottom: 6px; }
+  header p { font-size: 13px; color: #94a3b8; }
+  .layout { display: flex; max-width: 1400px; margin: 0 auto; }
+  nav { width: 220px; flex-shrink: 0; position: sticky; top: 0; align-self: flex-start; max-height: 100vh; overflow-y: auto; background: #fff; border-right: 1px solid #e2e8f0; padding: 16px 12px; }
+  nav a { display: block; color: #334155; text-decoration: none; font-size: 13.5px; padding: 6px 10px; border-radius: 6px; margin-bottom: 2px; }
+  nav a:hover { background: #eff6ff; color: #1d4ed8; }
+  nav .grp { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 14px 10px 6px; }
+  main { flex: 1; padding: 20px 24px 60px; min-width: 0; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 22px; margin-bottom: 20px; }
+  .card h2 { font-size: 18px; margin-bottom: 10px; }
+  .card h3 { font-size: 15px; margin: 14px 0 8px; color: #0f172a; }
+  .glo { font-size: 13.5px; line-height: 1.8; color: #334155; }
+  .glo code, .api code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 5px; font-size: 12.5px; font-family: Consolas, "Courier New", monospace; color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+  th { background: #f8fafc; text-align: left; padding: 7px 10px; border: 1px solid #e2e8f0; font-weight: 600; }
+  td { padding: 7px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 14px 16px; font-size: 12.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, "Courier New", monospace; margin: 8px 0; }
+  pre .c { color: #64748b; }
+  .api { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background: #fff; }
+  .api summary { cursor: pointer; padding: 10px 14px; display: flex; align-items: center; gap: 10px; list-style: none; }
+  .api summary::-webkit-details-marker { display: none; }
+  .api summary:hover { background: #f8fafc; }
+  .api summary .m { display: inline-block; min-width: 52px; text-align: center; border-radius: 5px; color: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 6px; }
+  .m.get { background: #2563eb; } .m.post { background: #16a34a; } .m.put { background: #d97706; } .m.del { background: #dc2626; }
+  .api summary .p { font-family: Consolas, monospace; font-size: 13.5px; color: #0f172a; font-weight: 600; }
+  .api summary .d { font-size: 13px; color: #64748b; margin-left: auto; }
+  .api .body { padding: 4px 16px 14px; border-top: 1px dashed #e2e8f0; }
+  .api .body .st { font-size: 12px; font-weight: 700; color: #94a3b8; margin: 12px 0 4px; letter-spacing: .5px; }
+  .tag { display: inline-block; font-size: 11px; border-radius: 10px; padding: 1px 8px; margin-left: 6px; }
+  .tag.pub { background: #ecfdf5; color: #047857; }
+  .tag.user { background: #eff6ff; color: #1d4ed8; }
+  .tag.mer { background: #fff7ed; color: #c2410c; }
+  .tag.adm { background: #faf5ff; color: #7c3aed; }
+  .search { margin-bottom: 16px; }
+  .search input { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+  .search input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .hidden { display: none !important; }
+  .note { font-size: 12.5px; color: #64748b; line-height: 1.7; }
+  @media (max-width: 900px) { nav { display: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>数码电商平台 · 后端接口文档（REST API）</h1>
+  <p>Spring Boot + JWT · 前后端分离 · 含大模型导购 SSE 流式接口 · 与数据库 digital_mall（24张表）一一对应</p>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="grp">约定</div>
+    <a href="#glo">全局约定</a>
+    <a href="#auth">认证模块</a>
+    <div class="grp">用户端</div>
+    <a href="#user">用户资料/地址/收藏</a>
+    <a href="#product">商品检索</a>
+    <a href="#cart">购物车</a>
+    <a href="#order">订单</a>
+    <a href="#payment">支付</a>
+    <a href="#comment">评价</a>
+    <a href="#aftersale">售后</a>
+    <a href="#chat">大模型导购</a>
+    <div class="grp">商家端</div>
+    <a href="#merchant">入驻/店铺/商品/发货</a>
+    <div class="grp">管理端</div>
+    <a href="#admin">用户/审核/商品/统计</a>
+    <a href="#errcode">错误码</a>
+  </nav>
+
+  <main>
+    <div class="search"><input type="text" id="kw" placeholder="🔍 搜索接口：输入路径、方法或关键字，如 /order、注册、chat…"></div>
+
+    <!-- ================= 全局约定 ================= -->
+    <div class="card" id="glo">
+      <h2>全局约定</h2>
+      <div class="glo">
+        <p><b>Base URL：</b><code>http://localhost:8080/api</code>（后端统一前缀 <code>/api</code>）</p>
+        <p><b>数据格式：</b>JSON（UTF-8），请求头 <code>Content-Type: application/json</code></p>
+        <p><b>认证方式：</b>登录接口返回 <code>token</code>（JWT），后续请求携带 <code>Authorization: Bearer {token}</code>；无/过期 Token 返回 401，越权访问返回 403</p>
+        <p><b>角色权限标注：</b><span class="tag pub">公开</span> 无需登录 · <span class="tag user">用户</span> 普通用户 · <span class="tag mer">商家</span> · <span class="tag adm">管理员</span></p>
+        <p><b>分页参数：</b><code>pageNum</code>（默认1）、<code>pageSize</code>（默认10），返回 <code>PageResult { total, pageNum, pageSize, list }</code></p>
+        <h3>统一响应结构 Result&lt;T&gt;</h3>
+<pre><span class="c">// 成功</span>
+{ "code": 200, "message": "success", "data": { } }
+<span class="c">// 失败</span>
+{ "code": 409, "message": "库存不足", "data": null }</pre>
+      </div>
+    </div>
+
+    <!-- ================= 认证 ================= -->
+    <div class="card" id="auth">
+      <h2>一、认证模块 AuthController</h2>
+
+      <details class="api" data-path="/auth/register" data-desc="用户注册">
+        <summary><span class="m post">POST</span><code class="p">/auth/register</code><span class="tag pub">公开</span><span class="d">用户注册（验证码可选）</span></summary>
+        <div class="body">
+          <div class="st">请求参数（JSON）</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>username</td><td>string</td><td>是</td><td>登录账号，唯一</td></tr>
+          <tr><td>password</td><td>string</td><td>是</td><td>密码，BCrypt 加密存储，6-20位</td></tr>
+          <tr><td>nickname</td><td>string</td><td>否</td><td>昵称</td></tr>
+          <tr><td>phone</td><td>string</td><td>否</td><td>手机号（找回密码用）</td></tr>
+          <tr><td>email</td><td>string</td><td>否</td><td>邮箱</td></tr>
+          <tr><td>code</td><td>string</td><td>否</td><td>短信验证码（与 /auth/sms-code 联动）</td></tr></table>
+          <div class="st">返回示例</div>
+<pre>{ "code": 200, "message": "success", "data": {
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "user": { "id": 1, "username": "zhangsan", "nickname": "张三", "avatar": null, "role": 0 }
+} }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/auth/login" data-desc="登录">
+        <summary><span class="m post">POST</span><code class="p">/auth/login</code><span class="tag pub">公开</span><span class="d">登录（账号密码）</span></summary>
+        <div class="body">
+          <div class="st">请求参数</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>username</td><td>string</td><td>是</td><td>账号</td></tr>
+          <tr><td>password</td><td>string</td><td>是</td><td>密码</td></tr></table>
+          <div class="st">返回示例</div>
+<pre>{ "code": 200, "data": { "token": "eyJ...", "user": { "id": 1, "username": "zhangsan", "role": 0 } } }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/auth/logout" data-desc="登出">
+        <summary><span class="m post">POST</span><code class="p">/auth/logout</code><span class="tag user">用户</span><span class="d">登出并失效 Token</span></summary>
+        <div class="body"><div class="note">请求头携带 Token；后端删除 Redis 中的令牌记录。返回 code 200 即可。</div></div>
+      </details>
+
+      <details class="api" data-path="/auth/me" data-desc="当前用户信息">
+        <summary><span class="m get">GET</span><code class="p">/auth/me</code><span class="tag user">用户</span><span class="d">获取当前登录用户信息</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": { "id": 1, "username": "zhangsan", "nickname": "张三",
+  "avatar": "https://...", "phone": "138****0000", "email": "a@b.com", "gender": 1, "role": 0 } }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/auth/password" data-desc="修改密码">
+        <summary><span class="m put">PUT</span><code class="p">/auth/password</code><span class="tag user">用户</span><span class="d">修改登录密码</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>oldPassword</td><td>string</td><td>是</td><td>原密码</td></tr>
+          <tr><td>newPassword</td><td>string</td><td>是</td><td>新密码</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/auth/forgot" data-desc="忘记密码找回">
+        <summary><span class="m post">POST</span><code class="p">/auth/forgot</code><span class="tag pub">公开</span><span class="d">密码找回（手机号+验证码）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>phone</td><td>string</td><td>是</td><td>绑定手机号</td></tr>
+          <tr><td>code</td><td>string</td><td>是</td><td>短信验证码（Redis 校验）</td></tr>
+          <tr><td>newPassword</td><td>string</td><td>是</td><td>新密码</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/auth/sms-code" data-desc="发送短信验证码">
+        <summary><span class="m post">POST</span><code class="p">/auth/sms-code</code><span class="tag pub">公开</span><span class="d">发送短信验证码（Redis TTL 5分钟）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>phone</td><td>string</td><td>是</td><td>手机号</td></tr>
+          <tr><td>type</td><td>string</td><td>是</td><td>register / forgot</td></tr></table>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 用户 ================= -->
+    <div class="card" id="user">
+      <h2>二、用户模块 UserController（资料 / 地址 / 收藏）</h2>
+
+      <details class="api" data-path="/user/profile" data-desc="个人资料">
+        <summary><span class="m get">GET</span><code class="p">/user/profile</code><span class="tag user">用户</span><span class="d">查询个人资料</span></summary>
+        <div class="body"><div class="note">返回同 /auth/me。</div></div>
+      </details>
+
+      <details class="api" data-path="/user/profile" data-desc="修改资料">
+        <summary><span class="m put">PUT</span><code class="p">/user/profile</code><span class="tag user">用户</span><span class="d">修改昵称/头像/性别/邮箱</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>nickname</td><td>string</td><td>否</td><td>昵称</td></tr>
+          <tr><td>avatar</td><td>string</td><td>否</td><td>头像 URL</td></tr>
+          <tr><td>gender</td><td>int</td><td>否</td><td>0未知 1男 2女</td></tr>
+          <tr><td>email</td><td>string</td><td>否</td><td>邮箱</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/user/address/list" data-desc="地址列表">
+        <summary><span class="m get">GET</span><code class="p">/user/address/list</code><span class="tag user">用户</span><span class="d">收货地址列表</span></summary>
+        <div class="body"><div class="note">返回地址数组，默认地址排最前（is_default=1）。</div></div>
+      </details>
+
+      <details class="api" data-path="/user/address" data-desc="新增地址">
+        <summary><span class="m post">POST</span><code class="p">/user/address</code><span class="tag user">用户</span><span class="d">新增收货地址</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>receiverName</td><td>string</td><td>是</td><td>收货人</td></tr>
+          <tr><td>receiverPhone</td><td>string</td><td>是</td><td>电话</td></tr>
+          <tr><td>province / city / district</td><td>string</td><td>否</td><td>省/市/区</td></tr>
+          <tr><td>detailAddress</td><td>string</td><td>是</td><td>详细地址</td></tr>
+          <tr><td>isDefault</td><td>int</td><td>否</td><td>0否 1是（置默认时清掉其他默认）</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/user/address/{id}" data-desc="修改地址">
+        <summary><span class="m put">PUT</span><code class="p">/user/address/{id}</code><span class="tag user">用户</span><span class="d">修改地址（参数同新增）</span></summary>
+        <div class="body"><div class="note">仅能操作本人的地址。</div></div>
+      </details>
+
+      <details class="api" data-path="/user/address/{id}" data-desc="删除地址">
+        <summary><span class="m del">DELETE</span><code class="p">/user/address/{id}</code><span class="tag user">用户</span><span class="d">删除地址</span></summary>
+        <div class="body"><div class="note">删除默认地址后自动将最近一条设为默认（可空）。</div></div>
+      </details>
+
+      <details class="api" data-path="/user/address/{id}/default" data-desc="设为默认地址">
+        <summary><span class="m put">PUT</span><code class="p">/user/address/{id}/default</code><span class="tag user">用户</span><span class="d">设为默认地址</span></summary>
+        <div class="body"><div class="note">事务内将其他地址 is_default 置 0。</div></div>
+      </details>
+
+      <details class="api" data-path="/user/favorite/list" data-desc="收藏列表">
+        <summary><span class="m get">GET</span><code class="p">/user/favorite/list</code><span class="tag user">用户</span><span class="d">我的收藏（含商品摘要）</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": [ { "productId": 1, "productName": "iPhone 17 Pro",
+  "price": 8999.00, "mainImage": "https://...", "sales": 1200, "favoriteTime": "2026-09-22 10:00:00" } ] }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/user/favorite" data-desc="添加收藏">
+        <summary><span class="m post">POST</span><code class="p">/user/favorite</code><span class="tag user">用户</span><span class="d">收藏商品</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>productId</td><td>long</td><td>是</td><td>商品ID</td></tr></table>
+          <div class="note">重复收藏返回 409。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/user/favorite/{productId}" data-desc="取消收藏">
+        <summary><span class="m del">DELETE</span><code class="p">/user/favorite/{productId}</code><span class="tag user">用户</span><span class="d">取消收藏</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/user/favorite/check" data-desc="是否已收藏">
+        <summary><span class="m get">GET</span><code class="p">/user/favorite/check?productId=</code><span class="tag user">用户</span><span class="d">查询是否已收藏（详情页用）</span></summary>
+        <div class="body"><div class="note">返回 data: true / false。</div></div>
+      </details>
+    </div>
+
+    <!-- ================= 商品 ================= -->
+    <div class="card" id="product">
+      <h2>三、商品模块 ProductController（浏览 / 检索）</h2>
+
+      <details class="api" data-path="/product/page" data-desc="商品分页检索">
+        <summary><span class="m get">GET</span><code class="p">/product/page</code><span class="tag pub">公开</span><span class="d">商品列表：关键词/分类/品牌/价格/排序（核心检索接口）</span></summary>
+        <div class="body">
+          <div class="st">请求参数（Query）</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>keyword</td><td>string</td><td>否</td><td>关键词（匹配 name/keywords/tags，like 查询）</td></tr>
+          <tr><td>categoryId</td><td>long</td><td>否</td><td>分类ID（含子分类）</td></tr>
+          <tr><td>brandId</td><td>long</td><td>否</td><td>品牌ID</td></tr>
+          <tr><td>minPrice / maxPrice</td><td>decimal</td><td>否</td><td>价格区间</td></tr>
+          <tr><td>sortBy</td><td>string</td><td>否</td><td>price / sales / view_count / recommend（默认综合）</td></tr>
+          <tr><td>order</td><td>string</td><td>否</td><td>asc / desc（默认 desc）</td></tr>
+          <tr><td>pageNum / pageSize</td><td>int</td><td>否</td><td>分页</td></tr></table>
+          <div class="st">返回示例（list 元素）</div>
+<pre>{ "id": 1, "productName": "华为 Mate 70 Pro", "mainImage": "https://...",
+  "price": 6999.00, "originalPrice": 7299.00, "sales": 3200, "shopName": "华为官方旗舰店", "tags": "旗舰机" }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/product/{id}" data-desc="商品详情">
+        <summary><span class="m get">GET</span><code class="p">/product/{id}</code><span class="tag pub">公开</span><span class="d">商品详情（SKU/参数/图片/店铺/评价摘要）</span></summary>
+        <div class="body">
+          <div class="st">返回示例</div>
+<pre>{ "code": 200, "data": {
+  "product": { "id": 1, "productName": "...", "keywords": "华为,mate,旗舰", "brief": "...", "viewCount": 5000 },
+  "skus":    [ { "id": 10, "skuName": "曜石黑/12GB+512GB", "price": 6999.00, "stock": 50 } ],
+  "attrs":   [ { "attrName": "屏幕", "attrValue": "6.8英寸 OLED" } ],
+  "images":  [ { "imageUrl": "https://...", "imageType": 0 } ],
+  "shop":    { "id": 1, "shopName": "华为官方旗舰店", "shopLogo": "..." },
+  "commentSummary": { "total": 156, "avgProductScore": 4.8, "avgLogisticsScore": 4.9 }
+} }</pre>
+          <div class="note">访问详情时后端自增 view_count（写入 Redis 异步落库）。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/product/category/tree" data-desc="分类树">
+        <summary><span class="m get">GET</span><code class="p">/product/category/tree</code><span class="tag pub">公开</span><span class="d">商品分类树（多级）</span></summary>
+        <div class="body"><div class="note">返回 [{ id, categoryName, children: [] }]，导航栏/筛选使用。</div></div>
+      </details>
+
+      <details class="api" data-path="/product/brand/list" data-desc="品牌列表">
+        <summary><span class="m get">GET</span><code class="p">/product/brand/list</code><span class="tag pub">公开</span><span class="d">品牌列表（筛选用）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/product/hot" data-desc="热门商品">
+        <summary><span class="m get">GET</span><code class="p">/product/hot</code><span class="tag pub">公开</span><span class="d">热门商品 Top10（Redis ZSet product:hot）</span></summary>
+        <div class="body">
+          <div class="note">读缓存：key <code>product:hot</code>，member=productId，score=sales；缓存未命中时回源数据库并回填。</div>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 购物车 ================= -->
+    <div class="card" id="cart">
+      <h2>四、购物车 CartController</h2>
+
+      <details class="api" data-path="/cart/list" data-desc="购物车列表">
+        <summary><span class="m get">GET</span><code class="p">/cart/list</code><span class="tag user">用户</span><span class="d">购物车列表（含商品与SKU信息）</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": [ { "id": 1, "skuId": 10, "productId": 1, "productName": "华为 Mate 70 Pro",
+  "skuName": "曜石黑/12GB+512GB", "mainImage": "...", "price": 6999.00, "quantity": 1, "isSelected": true,
+  "stock": 50, "status": 1 } ] }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/cart" data-desc="加入购物车">
+        <summary><span class="m post">POST</span><code class="p">/cart</code><span class="tag user">用户</span><span class="d">加入购物车（已存在则数量累加）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>skuId</td><td>long</td><td>是</td><td>SKU ID</td></tr>
+          <tr><td>quantity</td><td>int</td><td>是</td><td>数量（超库存返回 409）</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/cart/{id}/quantity" data-desc="修改数量">
+        <summary><span class="m put">PUT</span><code class="p">/cart/{id}/quantity</code><span class="tag user">用户</span><span class="d">修改购物车项数量</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>quantity</td><td>int</td><td>是</td><td>新数量（≥1）</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/cart/{id}/selected" data-desc="勾选状态">
+        <summary><span class="m put">PUT</span><code class="p">/cart/{id}/selected</code><span class="tag user">用户</span><span class="d">勾选/取消勾选</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>isSelected</td><td>boolean</td><td>是</td><td>true/false</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/cart/{id}" data-desc="删除购物车项">
+        <summary><span class="m del">DELETE</span><code class="p">/cart/{id}</code><span class="tag user">用户</span><span class="d">删除购物车项</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/cart/clear-selected" data-desc="清空勾选项">
+        <summary><span class="m post">POST</span><code class="p">/cart/clear-selected</code><span class="tag user">用户</span><span class="d">下单成功后清空勾选项</span></summary>
+        <div class="body"><div class="note">由前端在下单成功回调中调用。</div></div>
+      </details>
+    </div>
+
+    <!-- ================= 订单 ================= -->
+    <div class="card" id="order">
+      <h2>五、订单模块 OrderController</h2>
+
+      <details class="api" data-path="/order" data-desc="创建订单">
+        <summary><span class="m post">POST</span><code class="p">/order</code><span class="tag user">用户</span><span class="d">创建订单（核心交易接口，含库存扣减与快照）</span></summary>
+        <div class="body">
+          <div class="st">请求参数（JSON）</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>addressId</td><td>long</td><td>是</td><td>收货地址ID（读取后写入订单快照）</td></tr>
+          <tr><td>fromCart</td><td>boolean</td><td>否</td><td>true=结算购物车勾选项；false=直接购买</td></tr>
+          <tr><td>itemList</td><td>array</td><td>条件</td><td>fromCart=false 时必填：[{ skuId, quantity }]</td></tr>
+          <tr><td>remark</td><td>string</td><td>否</td><td>订单备注</td></tr></table>
+          <div class="st">业务规则</div>
+          <div class="note">① 校验SKU库存并预扣（乐观锁/行锁）→ ② 写入 order + order_item（商品名/图/单价快照）→ ③ 按店铺分单（一个店铺一单）→ ④ 清空勾选项。库存不足返回 409。</div>
+          <div class="st">返回示例</div>
+<pre>{ "code": 200, "data": { "orderId": 1001, "orderNo": "2026092212300001", "payAmount": 6999.00, "status": 0 } }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/order/page" data-desc="我的订单列表">
+        <summary><span class="m get">GET</span><code class="p">/order/page</code><span class="tag user">用户</span><span class="d">订单列表（按状态分类）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>否</td><td>空=全部；0待付款 1待发货 2待收货 3已完成 4已取消 5售后中</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/order/{id}" data-desc="订单详情">
+        <summary><span class="m get">GET</span><code class="p">/order/{id}</code><span class="tag user">用户</span><span class="d">订单详情（明细/收货快照/物流/售后）</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": { "id": 1001, "orderNo": "...", "status": 2, "payAmount": 6999.00,
+  "receiver": { "name": "张三", "phone": "138****0000", "address": "福建省厦门市..." },
+  "items": [ { "productName": "...", "skuName": "...", "price": 6999.00, "quantity": 1, "productImage": "..." } ],
+  "logistics": { "companyName": "顺丰速运", "logisticsNo": "SF123456789", "status": 1 },
+  "afterSale": null } }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/order/{id}/cancel" data-desc="取消订单">
+        <summary><span class="m post">POST</span><code class="p">/order/{id}/cancel</code><span class="tag user">用户</span><span class="d">取消订单（仅待付款可取消，回补库存）</span></summary>
+        <div class="body"><div class="note">状态机校验：非待付款返回 409；取消后 SKU 库存回补。</div></div>
+      </details>
+
+      <details class="api" data-path="/order/{id}/confirm" data-desc="确认收货">
+        <summary><span class="m post">POST</span><code class="p">/order/{id}/confirm</code><span class="tag user">用户</span><span class="d">确认收货（待收货→已完成）</span></summary>
+        <div class="body"><div class="note">状态机校验；完成后可评价。</div></div>
+      </details>
+
+      <details class="api" data-path="/order/{id}/track" data-desc="物流跟踪">
+        <summary><span class="m get">GET</span><code class="p">/order/{id}/track</code><span class="tag user">用户</span><span class="d">订单物流轨迹（时间倒序）</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": [ { "trackInfo": "快件已签收", "trackTime": "2026-09-24 18:20:00" },
+  { "trackInfo": "快件已到达【厦门集美营业点】", "trackTime": "2026-09-24 09:00:00" } ] }</pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 支付 ================= -->
+    <div class="card" id="payment">
+      <h2>六、支付模块 PaymentController（模拟支付）</h2>
+
+      <details class="api" data-path="/payment" data-desc="发起模拟支付">
+        <summary><span class="m post">POST</span><code class="p">/payment</code><span class="tag user">用户</span><span class="d">模拟支付（点击支付直接成功）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>orderId</td><td>long</td><td>是</td><td>订单ID</td></tr></table>
+          <div class="st">业务规则</div>
+          <div class="note">① 校验订单属于当前用户且待付款 → ② 写 payment 流水（已支付）→ ③ 订单状态 0→1（待发货）→ ④ 记录支付时间。返回 200 即支付成功。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/payment/query" data-desc="支付结果查询">
+        <summary><span class="m get">GET</span><code class="p">/payment/query?orderId=</code><span class="tag user">用户</span><span class="d">查询订单支付结果</span></summary>
+        <div class="body"><div class="note">返回 data: { paymentNo, status: 0待付|1已付 }。</div></div>
+      </details>
+    </div>
+
+    <!-- ================= 评价 ================= -->
+    <div class="card" id="comment">
+      <h2>七、评价模块 CommentController</h2>
+
+      <details class="api" data-path="/comment" data-desc="发表评价">
+        <summary><span class="m post">POST</span><code class="p">/comment</code><span class="tag user">用户</span><span class="d">订单完成后评价（商品+物流双评分）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>orderId</td><td>long</td><td>是</td><td>订单ID</td></tr>
+          <tr><td>orderItemId</td><td>long</td><td>是</td><td>订单明细ID（按明细评价）</td></tr>
+          <tr><td>productScore</td><td>int</td><td>是</td><td>商品评分 1-5</td></tr>
+          <tr><td>logisticsScore</td><td>int</td><td>是</td><td>物流评分 1-5</td></tr>
+          <tr><td>content</td><td>string</td><td>否</td><td>文字评价</td></tr>
+          <tr><td>imageUrls</td><td>array</td><td>否</td><td>评价图片 URL 列表</td></tr>
+          <tr><td>isAnonymous</td><td>boolean</td><td>否</td><td>是否匿名</td></tr></table>
+          <div class="note">规则：订单须已完成；同一 order_item 只能评一次（409）；默认 status=0 待审核。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/comment/product/{productId}" data-desc="商品评价列表">
+        <summary><span class="m get">GET</span><code class="p">/comment/product/{productId}</code><span class="tag pub">公开</span><span class="d">某商品已展示评价（分页）</span></summary>
+        <div class="body"><div class="note">仅返回 status=1（已展示）的评价。</div></div>
+      </details>
+
+      <details class="api" data-path="/comment/page" data-desc="评价管理分页">
+        <summary><span class="m get">GET</span><code class="p">/comment/page</code><span class="tag mer">商家</span><span class="tag adm">管理员</span><span class="d">评价管理（商家看本店；管理员看全部，按状态筛选）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>否</td><td>0待审核 1已展示 2违规删除</td></tr>
+          <tr><td>productName</td><td>string</td><td>否</td><td>商品名模糊搜索</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/comment/{id}/reply" data-desc="商家回复评价">
+        <summary><span class="m put">PUT</span><code class="p">/comment/{id}/reply</code><span class="tag mer">商家</span><span class="d">商家回复评价</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>replyContent</td><td>string</td><td>是</td><td>回复内容</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/comment/{id}/status" data-desc="评价审核">
+        <summary><span class="m put">PUT</span><code class="p">/comment/{id}/status</code><span class="tag adm">管理员</span><span class="d">评价审核（展示 / 违规删除）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>是</td><td>1已展示 2违规删除</td></tr></table>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 售后 ================= -->
+    <div class="card" id="aftersale">
+      <h2>八、售后模块 AfterSaleController</h2>
+
+      <details class="api" data-path="/after-sale" data-desc="申请售后">
+        <summary><span class="m post">POST</span><code class="p">/after-sale</code><span class="tag user">用户</span><span class="d">提交售后申请（退款/退货退款/换货）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>orderId</td><td>long</td><td>是</td><td>订单ID</td></tr>
+          <tr><td>orderItemId</td><td>long</td><td>是</td><td>订单明细ID</td></tr>
+          <tr><td>type</td><td>int</td><td>是</td><td>0仅退款 1退货退款 2换货</td></tr>
+          <tr><td>reason</td><td>string</td><td>是</td><td>申请原因</td></tr>
+          <tr><td>amount</td><td>decimal</td><td>是</td><td>申请退款金额（≤明细实付）</td></tr></table>
+          <div class="note">规则：订单状态为待收货/已完成可申请；申请后订单 status→5（售后中）；同一明细未完成的售后单仅一条。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/after-sale/page" data-desc="我的售后列表">
+        <summary><span class="m get">GET</span><code class="p">/after-sale/page</code><span class="tag user">用户</span><span class="d">我的售后单列表</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/after-sale/{id}" data-desc="售后详情">
+        <summary><span class="m get">GET</span><code class="p">/after-sale/{id}</code><span class="tag user">用户</span><span class="d">售后单详情（含处理进度）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/after-sale/{id}/cancel" data-desc="撤销售后">
+        <summary><span class="m post">POST</span><code class="p">/after-sale/{id}/cancel</code><span class="tag user">用户</span><span class="d">撤销申请（仅待商家处理可撤）</span></summary>
+        <div class="body"><div class="note">撤销后订单状态恢复为售后前状态。</div></div>
+      </details>
+
+      <details class="api" data-path="/after-sale/{id}/handle" data-desc="商家处理售后">
+        <summary><span class="m put">PUT</span><code class="p">/after-sale/{id}/handle</code><span class="tag mer">商家</span><span class="d">商家同意/拒绝售后</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>agree</td><td>boolean</td><td>是</td><td>true同意（status→4已完成）false拒绝（status→2）</td></tr>
+          <tr><td>rejectReason</td><td>string</td><td>条件</td><td>拒绝时必填</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/after-sale/{id}/admin" data-desc="管理员介入">
+        <summary><span class="m put">PUT</span><code class="p">/after-sale/{id}/admin</code><span class="tag adm">管理员</span><span class="d">管理员介入处理（商家拒绝后用户可申请平台介入）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>是</td><td>3平台介入中 → 4已完成</td></tr>
+          <tr><td>remark</td><td>string</td><td>否</td><td>处理意见</td></tr></table>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 大模型导购 ================= -->
+    <div class="card" id="chat">
+      <h2>九、大模型智能导购 ChatController（核心特色）</h2>
+
+      <details class="api" data-path="/chat/send" data-desc="发送消息-SSE流式">
+        <summary><span class="m post">POST</span><code class="p">/chat/send</code><span class="tag user">用户</span><span class="d">发送消息，SSE 流式返回（意图→召回→回答）</span></summary>
+        <div class="body">
+          <div class="st">请求参数（JSON）</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>sessionId</td><td>long</td><td>是</td><td>会话ID（首次对话先建会话）</td></tr>
+          <tr><td>content</td><td>string</td><td>是</td><td>用户自然语言输入，如"3000以内拍照好的手机"</td></tr></table>
+          <div class="st">响应：text/event-stream（SSE，Content-Type: text/event-stream）</div>
+          <div class="note">前端使用 EventSource / fetch 流式读取。完整事件流：</div>
+<pre>event: intent
+data: {"intent":"find_product","slots":{"category":"手机","budget":3000,"keyword":"拍照"}}
+
+event: products
+data: [{"id":8,"productName":"小米 15","price":2999.00,"similarity":0.93,"sales":5210},
+       {"id":12,"productName":"荣耀 Magic7","price":3199.00,"similarity":0.89,"sales":2310}]
+
+event: answer
+data: {"content":"根据您的预算和拍照需求，推荐：…"}
+data: {"content":"小米 15 搭载徕卡影像…"}      <span class="c">// 多个 data 增量拼接</span>
+
+event: done
+data: {"sessionId":1,"messageId":88,"intent":"find_product","tokenCount":860}</pre>
+          <div class="st">后端处理链路（答辩重点）</div>
+          <div class="note">① 意图识别：调用 LLM 对输入做意图分类（找商品/参数对比/选购建议/闲聊），抽取槽位（品类/预算/关键词）→ ② 向量召回：按槽位组合 query，调 Embedding 接口生成向量，在 Redis 中余弦相似度检索 TopN 商品 → ③ 组装 Prompt：注入召回商品的结构化信息（名称/价格/参数/评价分）+ 系统提示词（只推荐库内商品、输出对比表格、控制幻觉）→ ④ 调 LLM 流式生成回答（SSE 逐字返回）→ ⑤ 落库：用户消息与助手消息写入 chat_message（intent、product_ids、token_count）。</div>
+          <div class="st">前端事件解析建议</div>
+<pre><span class="c">// fetch 流式读取示例（简化）</span>
+const resp = await fetch('/api/chat/send', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token,
+  'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, content }) });
+const reader = resp.body.getReader(); <span class="c">// 按 event/data 分帧解析</span></pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/chat/session" data-desc="创建会话">
+        <summary><span class="m post">POST</span><code class="p">/chat/session</code><span class="tag user">用户</span><span class="d">创建导购会话</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>title</td><td>string</td><td>否</td><td>会话标题（可空，后端可自动摘要）</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/chat/session/page" data-desc="会话列表">
+        <summary><span class="m get">GET</span><code class="p">/chat/session/page</code><span class="tag user">用户</span><span class="d">历史会话列表（时间倒序）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/chat/session/{id}" data-desc="删除会话">
+        <summary><span class="m del">DELETE</span><code class="p">/chat/session/{id}</code><span class="tag user">用户</span><span class="d">删除会话及其消息</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/chat/message/page" data-desc="历史消息">
+        <summary><span class="m get">GET</span><code class="p">/chat/message/page?sessionId=</code><span class="tag user">用户</span><span class="d">会话历史消息（支撑多轮上下文与前端回显）</span></summary>
+        <div class="body"><div class="note">返回 [{ role: 0|1, content, productIds: [1,2], intent, createdTime }]。</div></div>
+      </details>
+
+      <details class="api" data-path="/chat/knowledge/sync" data-desc="重建商品向量库">
+        <summary><span class="m post">POST</span><code class="p">/chat/knowledge/sync</code><span class="tag adm">管理员</span><span class="d">商品知识库向量化（初始化/全量重建）</span></summary>
+        <div class="body">
+          <div class="st">请求参数</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>full</td><td>boolean</td><td>否</td><td>true=全量重建；false/空=增量（仅未向量化的商品）</td></tr></table>
+          <div class="st">业务规则</div>
+          <div class="note">遍历上架商品，拼接文本（名称+卖点+参数+标签）→ 调 Embedding 接口 → 写入 Redis <code>product:embedding:{productId}</code>。商品上下架时同步删除/添加向量。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/chat/hot-questions" data-desc="常见问题">
+        <summary><span class="m get">GET</span><code class="p">/chat/hot-questions</code><span class="tag pub">公开</span><span class="d">导购快捷提问（前端聊天框快捷入口）</span></summary>
+        <div class="body"><div class="note">返回预置问题数组：如 ["5000以内的旗舰手机推荐", "iPhone 和华为 怎么选", "适合学生党的笔记本"]。</div></div>
+      </details>
+    </div>
+
+    <!-- ================= 商家 ================= -->
+    <div class="card" id="merchant">
+      <h2>十、商家模块 MerchantController（入驻 / 店铺 / 商品 / 发货 / 统计）</h2>
+
+      <details class="api" data-path="/merchant/apply" data-desc="提交入驻申请">
+        <summary><span class="m post">POST</span><code class="p">/merchant/apply</code><span class="tag user">用户</span><span class="d">提交商家入驻申请</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>realName</td><td>string</td><td>是</td><td>真实姓名</td></tr>
+          <tr><td>idCard</td><td>string</td><td>否</td><td>身份证号</td></tr>
+          <tr><td>contactPhone</td><td>string</td><td>是</td><td>联系电话</td></tr>
+          <tr><td>shopName</td><td>string</td><td>是</td><td>拟开店铺名</td></tr>
+          <tr><td>shopIntro</td><td>string</td><td>否</td><td>店铺简介</td></tr>
+          <tr><td>qualificationUrl</td><td>string</td><td>否</td><td>资质材料文件URL</td></tr></table>
+          <div class="note">规则：同一用户仅一条待审申请（重复提交 409）；审核通过后自动创建 shop 并把用户 role 置 1。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/merchant/apply/status" data-desc="申请状态">
+        <summary><span class="m get">GET</span><code class="p">/merchant/apply/status</code><span class="tag user">用户</span><span class="d">查询我的入驻申请状态</span></summary>
+        <div class="body"><div class="note">返回 data: { status: 0待审核|1通过|2拒绝, rejectReason, shopId }。</div></div>
+      </details>
+
+      <details class="api" data-path="/merchant/shop" data-desc="店铺信息">
+        <summary><span class="m get">GET</span><code class="p">/merchant/shop</code><span class="tag mer">商家</span><span class="d">我的店铺信息</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/merchant/shop" data-desc="修改店铺">
+        <summary><span class="m put">PUT</span><code class="p">/merchant/shop</code><span class="tag mer">商家</span><span class="d">修改店铺信息与形象</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>shopName</td><td>string</td><td>否</td><td>店铺名</td></tr>
+          <tr><td>shopLogo / shopBanner</td><td>string</td><td>否</td><td>Logo / 横幅 URL</td></tr>
+          <tr><td>shopIntro</td><td>string</td><td>否</td><td>简介</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/merchant/product/page" data-desc="我的商品列表">
+        <summary><span class="m get">GET</span><code class="p">/merchant/product/page</code><span class="tag mer">商家</span><span class="d">本店商品管理列表（按状态筛选）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/merchant/product" data-desc="发布商品">
+        <summary><span class="m post">POST</span><code class="p">/merchant/product</code><span class="tag mer">商家</span><span class="d">发布商品（商品+SKU+参数+图片一次提交）</span></summary>
+        <div class="body">
+          <div class="st">请求参数（JSON）</div>
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>categoryId</td><td>long</td><td>是</td><td>分类</td></tr>
+          <tr><td>brandId</td><td>long</td><td>否</td><td>品牌</td></tr>
+          <tr><td>productName</td><td>string</td><td>是</td><td>商品名</td></tr>
+          <tr><td>productTitle</td><td>string</td><td>否</td><td>卖点标题</td></tr>
+          <tr><td>mainImage</td><td>string</td><td>否</td><td>主图</td></tr>
+          <tr><td>keywords / tags</td><td>string</td><td>否</td><td>检索关键词 / 标签</td></tr>
+          <tr><td>price / originalPrice</td><td>decimal</td><td>是/否</td><td>售价 / 原价</td></tr>
+          <tr><td>stock</td><td>int</td><td>是</td><td>总库存</td></tr>
+          <tr><td>skus</td><td>array</td><td>否</td><td>[{ skuName, price, stock, skuImage }]</td></tr>
+          <tr><td>attrs</td><td>array</td><td>否</td><td>[{ attrName, attrValue }]（屏幕/处理器等参数）</td></tr>
+          <tr><td>images</td><td>array</td><td>否</td><td>[{ imageUrl, imageType }]</td></tr></table>
+          <div class="note">规则：发布后 status=0 草稿；商家可自行上架；新增/编辑商品后应触发导购知识库增量同步。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/merchant/product/{id}" data-desc="编辑商品">
+        <summary><span class="m put">PUT</span><code class="p">/merchant/product/{id}</code><span class="tag mer">商家</span><span class="d">编辑商品（参数同发布）</span></summary>
+        <div class="body"><div class="note">仅能编辑本店商品。</div></div>
+      </details>
+
+      <details class="api" data-path="/merchant/product/{id}/status" data-desc="商品上下架">
+        <summary><span class="m put">PUT</span><code class="p">/merchant/product/{id}/status</code><span class="tag mer">商家</span><span class="d">上架/下架商品</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>是</td><td>1上架 2下架</td></tr></table>
+          <div class="note">下架后同步删除 Redis 商品向量；上架时同步添加。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/merchant/order/page" data-desc="店铺订单">
+        <summary><span class="m get">GET</span><code class="p">/merchant/order/page</code><span class="tag mer">商家</span><span class="d">本店订单列表（按状态筛选）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/merchant/order/{id}/deliver" data-desc="发货">
+        <summary><span class="m post">POST</span><code class="p">/merchant/order/{id}/deliver</code><span class="tag mer">商家</span><span class="d">订单发货（待发货→待收货）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>logisticsNo</td><td>string</td><td>是</td><td>物流单号</td></tr>
+          <tr><td>companyName</td><td>string</td><td>是</td><td>物流公司</td></tr></table>
+          <div class="note">规则：写入 logistics + 首条轨迹"商家已发货"；订单 1→2。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/merchant/stats" data-desc="经营统计">
+        <summary><span class="m get">GET</span><code class="p">/merchant/stats</code><span class="tag mer">商家</span><span class="d">经营数据统计（销量/销售额/访问量）</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": { "totalSales": 3200, "totalAmount": 2180000.00,
+  "todayAmount": 35600.00, "pendingShipCount": 12,
+  "topProducts": [ { "productId": 1, "productName": "...", "sales": 800, "amount": 560000.00 } ] } }</pre>
+          <div class="note">聚合来源：order/order_item（销售额）、product.sales（销量）、product.view_count（访问量）。</div>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 管理员 ================= -->
+    <div class="card" id="admin">
+      <h2>十一、管理员模块 AdminController（管控 / 审核 / 统计）</h2>
+
+      <details class="api" data-path="/admin/user/page" data-desc="用户管理">
+        <summary><span class="m get">GET</span><code class="p">/admin/user/page</code><span class="tag adm">管理员</span><span class="d">用户列表（搜索/按角色/按状态筛选）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>keyword</td><td>string</td><td>否</td><td>账号/昵称/手机号模糊</td></tr>
+          <tr><td>role</td><td>int</td><td>否</td><td>0用户 1商家 2管理员</td></tr>
+          <tr><td>status</td><td>int</td><td>否</td><td>0禁用 1正常</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/user/{id}/status" data-desc="启用禁用用户">
+        <summary><span class="m put">PUT</span><code class="p">/admin/user/{id}/status</code><span class="tag adm">管理员</span><span class="d">启用/禁用用户</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>是</td><td>0禁用 1正常</td></tr></table>
+          <div class="note">禁用后该用户 Token 立即失效；同时冻结其店铺。写入操作日志。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/user/{id}/role" data-desc="调整角色">
+        <summary><span class="m put">PUT</span><code class="p">/admin/user/{id}/role</code><span class="tag adm">管理员</span><span class="d">权限管控：调整用户角色</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>role</td><td>int</td><td>是</td><td>目标角色</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/merchant-apply/page" data-desc="入驻申请列表">
+        <summary><span class="m get">GET</span><code class="p">/admin/merchant-apply/page</code><span class="tag adm">管理员</span><span class="d">商家入驻申请审核列表</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/admin/merchant-apply/{id}/audit" data-desc="审核入驻">
+        <summary><span class="m put">PUT</span><code class="p">/admin/merchant-apply/{id}/audit</code><span class="tag adm">管理员</span><span class="d">审核入驻申请（通过自动开店铺）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>agree</td><td>boolean</td><td>是</td><td>true通过 / false拒绝</td></tr>
+          <tr><td>rejectReason</td><td>string</td><td>条件</td><td>拒绝时必填</td></tr></table>
+          <div class="note">通过：事务内创建 shop（merchant_id=申请人）+ 用户 role 置 1；写入操作日志。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/product/page" data-desc="平台商品管理">
+        <summary><span class="m get">GET</span><code class="p">/admin/product/page</code><span class="tag adm">管理员</span><span class="d">全平台商品列表</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/admin/product/{id}/status" data-desc="平台管控商品">
+        <summary><span class="m put">PUT</span><code class="p">/admin/product/{id}/status</code><span class="tag adm">管理员</span><span class="d">商品上下架/下架（平台级管控）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>是</td><td>1上架 2下架</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/order/page" data-desc="平台订单管理">
+        <summary><span class="m get">GET</span><code class="p">/admin/order/page</code><span class="tag adm">管理员</span><span class="d">全平台订单（含异常单筛选）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>status</td><td>int</td><td>否</td><td>订单状态（含5售后中）</td></tr>
+          <tr><td>orderNo</td><td>string</td><td>否</td><td>订单号精确查询</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/after-sale/page" data-desc="售后管理">
+        <summary><span class="m get">GET</span><code class="p">/admin/after-sale/page</code><span class="tag adm">管理员</span><span class="d">售后单管理（含平台介入单）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/admin/notice" data-desc="发布公告">
+        <summary><span class="m post">POST</span><code class="p">/admin/notice</code><span class="tag adm">管理员</span><span class="d">发布系统公告</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>title</td><td>string</td><td>是</td><td>公告标题</td></tr>
+          <tr><td>content</td><td>string</td><td>是</td><td>公告内容</td></tr>
+          <tr><td>type</td><td>int</td><td>否</td><td>0活动 1商品上新 2平台规则</td></tr>
+          <tr><td>publishTime</td><td>datetime</td><td>否</td><td>发布时间（空=立即发布）</td></tr></table>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/notice/page" data-desc="公告管理">
+        <summary><span class="m get">GET</span><code class="p">/admin/notice/page</code><span class="tag adm">管理员</span><span class="d">公告列表（含草稿）</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/admin/notice/{id}" data-desc="删除公告">
+        <summary><span class="m del">DELETE</span><code class="p">/admin/notice/{id}</code><span class="tag adm">管理员</span><span class="d">删除公告</span></summary>
+        <div class="body"></div>
+      </details>
+
+      <details class="api" data-path="/admin/stats/overview" data-desc="平台数据总览">
+        <summary><span class="m get">GET</span><code class="p">/admin/stats/overview</code><span class="tag adm">管理员</span><span class="d">平台数据总览（用户/商品/订单/交易额）</span></summary>
+        <div class="body"><div class="st">返回示例</div>
+<pre>{ "code": 200, "data": { "userCount": 1250, "merchantCount": 36, "productCount": 420,
+  "orderCount": 8650, "totalAmount": 5620000.00, "todayOrderCount": 128, "todayAmount": 183000.00 } }</pre>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/stats/trend" data-desc="交易趋势">
+        <summary><span class="m get">GET</span><code class="p">/admin/stats/trend?days=</code><span class="tag adm">管理员</span><span class="d">近7/30日交易趋势</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>days</td><td>int</td><td>否</td><td>7 或 30（默认7）</td></tr></table>
+          <div class="note">返回 [{ date: "2026-09-16", orderCount, amount }]；图表接口（ECharts 折线图）。</div>
+        </div>
+      </details>
+
+      <details class="api" data-path="/admin/operation-log/page" data-desc="操作日志">
+        <summary><span class="m get">GET</span><code class="p">/admin/operation-log/page</code><span class="tag adm">管理员</span><span class="d">操作日志查询（审计）</span></summary>
+        <div class="body">
+          <table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          <tr><td>module</td><td>string</td><td>否</td><td>按模块筛选</td></tr>
+          <tr><td>username</td><td>string</td><td>否</td><td>按操作人筛选</td></tr></table>
+        </div>
+      </details>
+    </div>
+
+    <!-- ================= 错误码 ================= -->
+    <div class="card" id="errcode">
+      <h2>十二、错误码约定</h2>
+      <table>
+        <tr><th>code</th><th>含义</th><th>典型场景</th></tr>
+        <tr><td>200</td><td>成功</td><td>—</td></tr>
+        <tr><td>400</td><td>参数错误</td><td>缺少必填参数、格式错误</td></tr>
+        <tr><td>401</td><td>未认证 / Token 失效</td><td>未登录、Token 过期或被禁用</td></tr>
+        <tr><td>403</td><td>无权限</td><td>角色越权访问（商家调管理员接口等）</td></tr>
+        <tr><td>404</td><td>资源不存在</td><td>商品/订单/地址不存在</td></tr>
+        <tr><td>409</td><td>业务冲突</td><td>库存不足、重复评价、重复入驻申请、订单状态不允许操作</td></tr>
+        <tr><td>500</td><td>服务器异常</td><td>未知异常（全局异常处理器兜底）</td></tr>
+      </table>
+      <div class="note">后端实现建议：全局异常处理器（@RestControllerAdvice）+ 自定义 BusinessException(code, message)；Spring Security 或自定义拦截器做 JWT 解析与 @RequireRole 注解鉴权。</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  var kw = document.getElementById('kw');
+  if (!kw) return;
+  kw.addEventListener('input', function () {
+    var q = kw.value.trim().toLowerCase();
+    var apis = document.querySelectorAll('.api');
+    for (var i = 0; i < apis.length; i++) {
+      var el = apis[i];
+      var hit = !q || (el.textContent.toLowerCase().indexOf(q) !== -1);
+      el.classList.toggle('hidden', !hit);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
