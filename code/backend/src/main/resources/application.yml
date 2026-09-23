@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: digital-mall
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/digital_mall?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3000ms
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+# JWT 配置（生产环境务必更换 secret）
+jwt:
+  secret: digital-mall-secret-key-please-change-in-production-0123456789
+  expire-hours: 24
+
+# 大模型导购配置（OpenAI 兼容接口，后续开发填入真实密钥）
+llm:
+  base-url: https://ark.cn-beijing.volces.com/api/v3
+  api-key: your-api-key
+  model: doubao-pro-32k
+  embedding-model: doubao-embedding

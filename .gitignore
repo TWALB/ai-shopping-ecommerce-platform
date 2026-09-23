@@ -11,3 +11,18 @@ venv/
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# Java / Maven
+backend/target/
+*.class
+*.jar
+
+# Node / Vite
+node_modules/
+frontend/dist/
+
+# IDE
+*.iml
+.idea/
+.vscode/
+
