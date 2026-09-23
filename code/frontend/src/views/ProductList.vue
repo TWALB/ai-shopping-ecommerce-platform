@@ -44,7 +44,7 @@
             <span class="p-sales">已售{{ p.sales }}</span>
           </div>
           <el-button type="primary" size="small" style="width: 100%; margin-top: 8px"
-                     @click="$router.push(`/products`)">查看详情</el-button>
+                     @click="$router.push(`/products/${p.id}`)">查看详情</el-button>
         </el-card>
       </el-col>
     </el-row>

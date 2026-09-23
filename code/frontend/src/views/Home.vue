@@ -9,7 +9,7 @@
     <h3 class="section-title">🔥 热门商品</h3>
     <el-row :gutter="16">
       <el-col :span="6" v-for="p in hotProducts" :key="p.id">
-        <el-card class="product-card" shadow="hover" @click="$router.push(`/products`)">
+        <el-card class="product-card" shadow="hover" @click="$router.push(`/products/${p.id}`)">
           <el-image :src="p.mainImage || placeholder" fit="cover" class="p-img" />
           <div class="p-name">{{ p.productName }}</div>
           <div class="p-price">¥{{ p.price }}</div>
