@@ -15,6 +15,7 @@ import com.digitalmall.vo.CommentSummaryVO;
 import com.digitalmall.vo.ProductDetailVO;
 import com.digitalmall.vo.ProductVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
  * 商品服务实现
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
@@ -161,27 +163,31 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductVO> hot() {
-        ZSetOperations<String, String> zset = stringRedisTemplate.opsForZSet();
-        Set<String> cachedIds = zset.reverseRange(KEY_HOT, 0, 9);
-        List<Long> productIds;
-        if (cachedIds == null || cachedIds.isEmpty()) {
-            // 缓存未命中：回源数据库销量 Top10 并回填
-            List<Product> top = productMapper.selectList(Wrappers.<Product>lambdaQuery()
-                    .eq(Product::getStatus, 1)
-                    .orderByDesc(Product::getSales)
-                    .last("LIMIT 10"));
-            productIds = top.stream().map(Product::getId).toList();
+        // 先尝试 Redis 缓存（降级容错：Redis 不可用时直接回源数据库）
+        try {
+            ZSetOperations<String, String> zset = stringRedisTemplate.opsForZSet();
+            Set<String> cachedIds = zset.reverseRange(KEY_HOT, 0, 9);
+            if (cachedIds != null && !cachedIds.isEmpty()) {
+                List<Long> ids = cachedIds.stream().map(Long::valueOf).toList();
+                return toVOList(productMapper.selectBatchIds(ids));
+            }
+        } catch (Exception e) {
+            log.warn("Redis 不可用，热门商品降级为数据库直查: {}", e.getMessage());
+        }
+        // 缓存未命中或 Redis 故障：查数据库销量 Top10
+        List<Product> top = productMapper.selectList(Wrappers.<Product>lambdaQuery()
+                .eq(Product::getStatus, 1)
+                .orderByDesc(Product::getSales)
+                .last("LIMIT 10"));
+        // 尝试回填缓存（失败忽略）
+        try {
+            ZSetOperations<String, String> zset = stringRedisTemplate.opsForZSet();
             for (Product p : top) {
                 zset.add(KEY_HOT, String.valueOf(p.getId()),
                         p.getSales() == null ? 0 : p.getSales().doubleValue());
             }
-        } else {
-            productIds = cachedIds.stream().map(Long::valueOf).toList();
-        }
-        if (productIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return toVOList(productMapper.selectBatchIds(productIds));
+        } catch (Exception ignored) { /* Redis 不可用不影响主流程 */ }
+        return toVOList(top);
     }
 
     // ==================== 私有辅助 ====================
