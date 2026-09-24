@@ -2,27 +2,31 @@ package com.digitalmall.controller;
 
 import com.digitalmall.common.Result;
 import com.digitalmall.security.RequireRole;
+import com.digitalmall.service.PaymentService;
+import com.digitalmall.vo.PaymentVO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 支付模块（接口文档：六、支付 模拟支付）
+ * 支付模块（接口文档：六、支付 模拟支付）— 用户接口
  */
 @RestController
 @RequestMapping("/api/payment")
 @RequireRole
+@RequiredArgsConstructor
 public class PaymentController {
 
-    /** 发起模拟支付（点击支付直接成功） */
+    private final PaymentService paymentService;
+
+    /** 模拟支付（点击支付直接成功） */
     @PostMapping
-    public Result<Void> pay(@RequestParam Long orderId) {
-        // TODO 校验订单归属与待付款状态 → 写 payment 流水 → 订单 0→1
-        return Result.success();
+    public Result<PaymentVO> pay(@RequestParam Long orderId) {
+        return Result.success(paymentService.pay(orderId));
     }
 
-    /** 支付结果查询 */
+    /** 查询订单支付结果 */
     @GetMapping("/query")
-    public Result<Void> query(@RequestParam Long orderId) {
-        // TODO
-        return Result.success();
+    public Result<PaymentVO> query(@RequestParam Long orderId) {
+        return Result.success(paymentService.query(orderId));
     }
 }

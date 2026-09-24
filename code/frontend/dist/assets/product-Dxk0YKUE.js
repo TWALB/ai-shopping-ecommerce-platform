@@ -1,0 +1,1 @@
+import{r as t}from"./request-CDF9aq0s.js";const r=e=>t.get("/product/page",{params:e}),c=e=>t.get(`/product/${e}`),g=()=>t.get("/product/category/tree"),s=()=>t.get("/product/brand/list"),a=()=>t.get("/product/hot");export{g as a,s as b,r as c,c as d,a as g};

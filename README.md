@@ -13,14 +13,16 @@
 ├── 数码电商平台-数据库建表SQL.sql       MySQL 建表脚本（24张表+初始数据）
 ├── 数码电商平台-数据库ER图.html         数据库 ER 图（浏览器打开）
 ├── 数码电商平台-后端接口文档.html       后端 REST API 文档（81个接口，可搜索）
+├── 测试商品数据.sql                     8件测试商品（含SKU/参数/图片）
 │
-├── 验证-建表SQL.py / 验证-ER图HTML.py / 验证-接口文档.py   产物校验脚本
+├── 验证-建表SQL.py / 验证-ER图HTML.py / 验证-接口文档.py / 验证-测试数据SQL.py   产物校验脚本
 │
 └── code/                              前后端工程代码
     ├── backend/       Spring Boot 3 + MyBatis-Plus + Redis + JWT
-    │                   ├ 认证闭环已实现，其余模块为按接口文档建好的骨架（README 见 code/backend/README.md）
+    │                   ├ 认证闭环 ✓ 商品模块 ✓ 交易闭环（购物车/订单/支付/地址）✓
+    │                   ├ 其余为按接口文档建好的骨架（README 见 code/backend/README.md）
     └── frontend/      Vue3 + Vite + Element Plus + Pinia
-                        ├ 登录/注册/首页/商品列表/导购聊天页已就绪（README 见 code/frontend/README.md）
+                        ├ 登录/注册/首页/商品/详情/导购聊天/购物车/结算/订单 已就绪（README 见 code/frontend/README.md）
 ```
 
 ## 技术栈
@@ -37,4 +39,4 @@
 
 ## 开发路线
 数据库（完成）→ 接口文档（完成）→ 脚手架（完成）→
-①商品模块 → ②购物车/订单/支付 → ③评价/售后 → ④商家端 → ⑤管理端 → ⑥大模型导购（核心，最后攻坚）
+①商品模块（完成）→ ②购物车/订单/支付（完成）→ ③评价/售后 → ④商家端 → ⑤管理端 → ⑥大模型导购（核心，最后攻坚）

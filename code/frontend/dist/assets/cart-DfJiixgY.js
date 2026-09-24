@@ -1,0 +1,1 @@
+import{r as e}from"./request-CDF9aq0s.js";const r=()=>e.get("/cart/list"),c=(t,a)=>e.post("/cart",null,{params:{skuId:t,quantity:a}}),l=(t,a)=>e.put(`/cart/${t}/quantity`,null,{params:{quantity:a}}),u=(t,a)=>e.put(`/cart/${t}/selected`,null,{params:{isSelected:a}}),n=t=>e.delete(`/cart/${t}`);export{c as a,l as b,n as d,r as g,u};

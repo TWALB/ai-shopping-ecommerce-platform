@@ -1,0 +1,1 @@
+import{r as e}from"./request-CDF9aq0s.js";const o=r=>e.post("/order",r),a=r=>e.get("/order/page",{params:r}),s=r=>e.get(`/order/${r}`),c=r=>e.post(`/order/${r}/cancel`),d=r=>e.post(`/order/${r}/confirm`),n=r=>e.get(`/order/${r}/track`),p=r=>e.post("/payment",null,{params:{orderId:r}});export{c as a,d as b,o as c,s as d,n as e,a as g,p};

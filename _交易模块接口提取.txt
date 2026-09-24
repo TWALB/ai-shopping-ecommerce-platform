@@ -1,0 +1,585 @@
+
+===== 购物车 =====
+
+===== 订单 =====
+
+===== 支付 =====
+评价
+售后
+大模型导购
+商家端
+入驻/店铺/商品/发货
+管理端
+用户/审核/商品/统计
+错误码
+全局约定
+Base URL：
+http://localhost:8080/api
+（后端统一前缀
+/api
+）
+数据格式：
+JSON（UTF-8），请求头
+Content-Type: application/json
+认证方式：
+登录接口返回
+token
+（JWT），后续请求携带
+Authorization: Bearer {token}
+；无/过期 Token 返回 401，越权访问返回 403
+角色权限标注：
+公开
+无需登录 ·
+用户
+普通用户 ·
+商家
+·
+管理员
+分页参数：
+pageNum
+（默认1）、
+pageSize
+（默认10），返回
+PageResult { total, pageNum, pageSize, list }
+统一响应结构 Result<T>
+// 成功
+{ "code": 200, "message": "success", "data": { } }
+// 失败
+{ "code": 409, "message": "库存不足", "data": null }
+
+===== 购物车列表（含商品与SKU信息） =====
+返回示例
+{ "code": 200, "data": [ { "id": 1, "skuId": 10, "productId": 1, "productName": "华为 Mate 70 Pro",
+"skuName": "曜石黑/12GB+512GB", "mainImage": "...", "price": 6999.00, "quantity": 1, "isSelected": true,
+"stock": 50, "status": 1 } ] }
+POST
+/cart
+用户
+
+===== 加入购物车（已存在则数量累加） =====
+参数
+类型
+必填
+说明
+skuId
+long
+是
+SKU ID
+quantity
+int
+是
+数量（超库存返回 409）
+PUT
+/cart/{id}/quantity
+用户
+
+===== 修改购物车项数量 =====
+参数
+类型
+必填
+说明
+quantity
+int
+是
+新数量（≥1）
+PUT
+/cart/{id}/selected
+用户
+勾选/取消勾选
+参数
+类型
+必填
+说明
+isSelected
+boolean
+是
+true/false
+DELETE
+/cart/{id}
+用户
+
+===== 删除购物车项 =====
+POST
+/cart/clear-selected
+用户
+下单成功后清空勾选项
+由前端在下单成功回调中调用。
+
+===== 五、订单模块 OrderController =====
+POST
+/order
+用户
+创建订单（核心交易接口，含库存扣减与快照）
+请求参数（JSON）
+参数
+类型
+必填
+说明
+addressId
+long
+是
+
+===== 收货地址ID（读取后写入订单快照） =====
+fromCart
+boolean
+否
+true=结算购物车勾选项；false=直接购买
+itemList
+array
+条件
+fromCart=false 时必填：[{ skuId, quantity }]
+remark
+string
+否
+
+===== 订单备注 =====
+业务规则
+① 校验SKU库存并预扣（乐观锁/行锁）→ ② 写入 order + order_item（商品名/图/单价快照）→ ③ 按店铺分单（一个店铺一单）→ ④ 清空勾选项。库存不足返回 409。
+返回示例
+{ "code": 200, "data": { "orderId": 1001, "orderNo": "2026092212300001", "payAmount": 6999.00, "status": 0 } }
+GET
+/order/page
+用户
+
+===== 订单列表（按状态分类） =====
+参数
+类型
+必填
+说明
+status
+int
+否
+空=全部；0待付款 1待发货 2待收货 3已完成 4已取消 5售后中
+GET
+/order/{id}
+用户
+
+===== 订单详情（明细/收货快照/物流/售后） =====
+返回示例
+{ "code": 200, "data": { "id": 1001, "orderNo": "...", "status": 2, "payAmount": 6999.00,
+"receiver": { "name": "张三", "phone": "138****0000", "address": "福建省厦门市..." },
+"items": [ { "productName": "...", "skuName": "...", "price": 6999.00, "quantity": 1, "productImage": "..." } ],
+"logistics": { "companyName": "顺丰速运", "logisticsNo": "SF123456789", "status": 1 },
+"afterSale": null } }
+POST
+/order/{id}/cancel
+用户
+
+===== 取消订单（仅待付款可取消，回补库存） =====
+状态机校验：非待付款返回 409；取消后 SKU 库存回补。
+POST
+/order/{id}/confirm
+用户
+确认收货（待收货→已完成）
+状态机校验；完成后可评价。
+GET
+/order/{id}/track
+用户
+
+===== 订单物流轨迹（时间倒序） =====
+返回示例
+{ "code": 200, "data": [ { "trackInfo": "快件已签收", "trackTime": "2026-09-24 18:20:00" },
+{ "trackInfo": "快件已到达【厦门集美营业点】", "trackTime": "2026-09-24 09:00:00" } ] }
+
+===== 六、支付模块 PaymentController（模拟支付） =====
+POST
+/payment
+用户
+
+===== 模拟支付（点击支付直接成功） =====
+参数
+类型
+必填
+说明
+orderId
+long
+是
+
+===== 订单ID =====
+业务规则
+① 校验订单属于当前用户且待付款 → ② 写 payment 流水（已支付）→ ③ 订单状态 0→1（待发货）→ ④ 记录支付时间。返回 200 即支付成功。
+GET
+/payment/query?orderId=
+用户
+
+===== 查询订单支付结果 =====
+返回 data: { paymentNo, status: 0待付|1已付 }。
+
+===== 订单完成后评价（商品+物流双评分） =====
+参数
+类型
+必填
+说明
+orderId
+long
+是
+
+===== 订单ID =====
+orderItemId
+long
+是
+
+===== 订单明细ID（按明细评价） =====
+productScore
+int
+是
+商品评分 1-5
+logisticsScore
+int
+是
+物流评分 1-5
+content
+string
+否
+文字评价
+imageUrls
+array
+否
+评价图片 URL 列表
+isAnonymous
+boolean
+否
+是否匿名
+规则：订单须已完成；同一 order_item 只能评一次（409）；默认 status=0 待审核。
+GET
+/comment/product/{productId}
+公开
+某商品已展示评价（分页）
+仅返回 status=1（已展示）的评价。
+GET
+/comment/page
+商家
+管理员
+评价管理（商家看本店；管理员看全部，按状态筛选）
+参数
+类型
+必填
+说明
+status
+int
+否
+0待审核 1已展示 2违规删除
+productName
+string
+否
+商品名模糊搜索
+PUT
+/comment/{id}/reply
+商家
+商家回复评价
+参数
+类型
+必填
+说明
+replyContent
+string
+是
+回复内容
+PUT
+/comment/{id}/status
+管理员
+评价审核（展示 / 违规删除）
+参数
+类型
+必填
+说明
+status
+int
+是
+1已展示 2违规删除
+
+===== 订单ID =====
+orderItemId
+long
+是
+
+===== 订单明细ID =====
+type
+int
+是
+0仅退款 1退货退款 2换货
+reason
+string
+是
+申请原因
+amount
+decimal
+是
+申请退款金额（≤明细实付）
+规则：订单状态为待收货/已完成可申请；申请后订单 status→5（售后中）；同一明细未完成的售后单仅一条。
+GET
+/after-sale/page
+用户
+我的售后单列表
+GET
+/after-sale/{id}
+用户
+售后单详情（含处理进度）
+POST
+/after-sale/{id}/cancel
+用户
+撤销申请（仅待商家处理可撤）
+
+===== 撤销后订单状态恢复为售后前状态。 =====
+PUT
+/after-sale/{id}/handle
+商家
+商家同意/拒绝售后
+参数
+类型
+必填
+说明
+agree
+boolean
+是
+true同意（status→4已完成）false拒绝（status→2）
+rejectReason
+string
+条件
+拒绝时必填
+PUT
+/after-sale/{id}/admin
+管理员
+管理员介入处理（商家拒绝后用户可申请平台介入）
+参数
+类型
+必填
+说明
+status
+int
+是
+3平台介入中 → 4已完成
+remark
+string
+否
+处理意见
+
+===== 本店订单列表（按状态筛选） =====
+POST
+/merchant/order/{id}/deliver
+商家
+
+===== 订单发货（待发货→待收货） =====
+参数
+类型
+必填
+说明
+logisticsNo
+string
+是
+物流单号
+companyName
+string
+是
+物流公司
+规则：写入 logistics + 首条轨迹"商家已发货"；订单 1→2。
+GET
+/merchant/stats
+商家
+经营数据统计（销量/销售额/访问量）
+返回示例
+{ "code": 200, "data": { "totalSales": 3200, "totalAmount": 2180000.00,
+"todayAmount": 35600.00, "pendingShipCount": 12,
+"topProducts": [ { "productId": 1, "productName": "...", "sales": 800, "amount": 560000.00 } ] } }
+聚合来源：order/order_item（销售额）、product.sales（销量）、product.view_count（访问量）。
+十一、管理员模块 AdminController（管控 / 审核 / 统计）
+GET
+/admin/user/page
+管理员
+用户列表（搜索/按角色/按状态筛选）
+参数
+类型
+必填
+说明
+keyword
+string
+否
+账号/昵称/手机号模糊
+role
+int
+否
+0用户 1商家 2管理员
+status
+int
+否
+0禁用 1正常
+PUT
+/admin/user/{id}/status
+管理员
+启用/禁用用户
+参数
+类型
+必填
+说明
+status
+int
+是
+0禁用 1正常
+禁用后该用户 Token 立即失效；同时冻结其店铺。写入操作日志。
+PUT
+/admin/user/{id}/role
+管理员
+权限管控：调整用户角色
+参数
+类型
+必填
+说明
+role
+int
+是
+目标角色
+GET
+/admin/merchant-apply/page
+管理员
+商家入驻申请审核列表
+PUT
+/admin/merchant-apply/{id}/audit
+管理员
+审核入驻申请（通过自动开店铺）
+参数
+类型
+必填
+说明
+agree
+boolean
+是
+true通过 / false拒绝
+rejectReason
+string
+条件
+拒绝时必填
+通过：事务内创建 shop（merchant_id=申请人）+ 用户 role 置 1；写入操作日志。
+GET
+/admin/product/page
+管理员
+全平台商品列表
+PUT
+/admin/product/{id}/status
+管理员
+商品上下架/下架（平台级管控）
+参数
+类型
+必填
+说明
+status
+int
+是
+1上架 2下架
+GET
+/admin/order/page
+管理员
+
+===== 全平台订单（含异常单筛选） =====
+参数
+类型
+必填
+说明
+status
+int
+否
+
+===== 订单状态（含5售后中） =====
+orderNo
+string
+否
+
+===== 订单号精确查询 =====
+GET
+/admin/after-sale/page
+管理员
+售后单管理（含平台介入单）
+POST
+/admin/notice
+管理员
+发布系统公告
+参数
+类型
+必填
+说明
+title
+string
+是
+公告标题
+content
+string
+是
+公告内容
+type
+int
+否
+0活动 1商品上新 2平台规则
+publishTime
+datetime
+否
+发布时间（空=立即发布）
+GET
+/admin/notice/page
+管理员
+公告列表（含草稿）
+DELETE
+/admin/notice/{id}
+管理员
+删除公告
+GET
+/admin/stats/overview
+管理员
+平台数据总览（用户/商品/订单/交易额）
+返回示例
+{ "code": 200, "data": { "userCount": 1250, "merchantCount": 36, "productCount": 420,
+"orderCount": 8650, "totalAmount": 5620000.00, "todayOrderCount": 128, "todayAmount": 183000.00 } }
+GET
+/admin/stats/trend?days=
+管理员
+近7/30日交易趋势
+参数
+类型
+必填
+说明
+days
+int
+否
+7 或 30（默认7）
+返回 [{ date: "2026-09-16", orderCount, amount }]；图表接口（ECharts 折线图）。
+GET
+/admin/operation-log/page
+管理员
+操作日志查询（审计）
+参数
+类型
+必填
+说明
+module
+string
+否
+按模块筛选
+username
+string
+否
+按操作人筛选
+十二、错误码约定
+code
+含义
+典型场景
+200
+成功
+—
+400
+参数错误
+缺少必填参数、格式错误
+401
+未认证 / Token 失效
+未登录、Token 过期或被禁用
+403
+无权限
+角色越权访问（商家调管理员接口等）
+404
+资源不存在
+
+===== 商品/订单/地址不存在 =====
+409
+业务冲突
+库存不足、重复评价、重复入驻申请、订单状态不允许操作
+500
+服务器异常
+未知异常（全局异常处理器兜底）
+后端实现建议：全局异常处理器（@RestControllerAdvice）+ 自定义 BusinessException(code, message)；Spring Security 或自定义拦截器做 JWT 解析与 @RequireRole 注解鉴权。

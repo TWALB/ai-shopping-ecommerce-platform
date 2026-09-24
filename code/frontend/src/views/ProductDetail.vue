@@ -83,11 +83,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getProductDetail } from '../api/product'
+import { addToCart } from '../api/cart'
 
 const route = useRoute()
+const router = useRouter()
 const detail = ref(null)
 const selectedSkuId = ref(null)
 const quantity = ref(1)
@@ -108,16 +110,26 @@ async function load() {
   if (detail.value.skus.length) selectedSkuId.value = detail.value.skus[0].id
 }
 
-function addCart() {
-  ElMessage.info('购物车接口开发中（下一步实现）')
+async function addCart() {
+  if (!selectedSkuId.value) {
+    ElMessage.warning('请先选择规格')
+    return
+  }
+  await addToCart(selectedSkuId.value, quantity.value)
+  ElMessage.success('已加入购物车')
 }
 
 function buyNow() {
-  ElMessage.info('下单接口开发中（下一步实现）')
+  if (!selectedSkuId.value) {
+    ElMessage.warning('请先选择规格')
+    return
+  }
+  const p = detail.value.product
+  router.push(`/checkout?from=buy&productId=${p.id}&skuId=${selectedSkuId.value}&quantity=${quantity.value}`)
 }
 
 function toggleFavorite() {
-  ElMessage.info('收藏接口开发中（下一步实现）')
+  ElMessage.info('收藏功能后续迭代实现')
 }
 
 onMounted(load)
