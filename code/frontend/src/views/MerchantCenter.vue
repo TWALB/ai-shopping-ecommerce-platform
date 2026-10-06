@@ -1,10 +1,9 @@
 <template>
   <div class="merchant-page">
     <el-card>
-      <el-tabs v-model="activeTab">
-        <!-- 店铺信息 -->
-        <el-tab-pane label="店铺信息" name="shop">
-          <el-descriptions :column="2" border v-if="shop">
+      <!-- 店铺信息 -->
+      <div v-show="activeTab === 'shop'">
+        <el-descriptions :column="2" border v-if="shop">
             <el-descriptions-item label="店铺名称">{{ shop.shopName }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="shop.status === 1 ? 'success' : 'danger'">{{ shop.status === 1 ? '正常' : '冻结' }}</el-tag>
@@ -39,10 +38,10 @@
               <el-button type="primary" :loading="savingShop" @click="saveShop">保存修改</el-button>
             </el-form-item>
           </el-form>
-        </el-tab-pane>
+        </div>
 
         <!-- 商品管理 -->
-        <el-tab-pane label="商品管理" name="product">
+        <div v-show="activeTab === 'products'">
           <div class="tool-row">
             <el-radio-group v-model="productStatus" @change="loadProducts">
               <el-radio-button :value="''">全部</el-radio-button>
@@ -87,10 +86,10 @@
           <el-pagination v-if="productTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="productTotal" :page-size="productPageSize" v-model:current-page="productPageNum"
                          @current-change="loadProducts" />
-        </el-tab-pane>
+        </div>
 
         <!-- 订单发货 -->
-        <el-tab-pane label="订单发货" name="order">
+        <div v-show="activeTab === 'orders'">
           <div class="tool-row">
             <el-radio-group v-model="orderStatus" @change="loadOrders">
               <el-radio-button :value="''">全部</el-radio-button>
@@ -140,10 +139,10 @@
           <el-pagination v-if="orderTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="orderTotal" :page-size="orderPageSize" v-model:current-page="orderPageNum"
                          @current-change="loadOrders" />
-        </el-tab-pane>
+        </div>
 
         <!-- 经营统计 -->
-        <el-tab-pane label="经营统计" name="stats">
+        <div v-show="activeTab === 'stats'">
           <el-row :gutter="16">
             <el-col :span="6">
               <el-card class="stat-card"><el-statistic title="累计销量(件)" :value="stats.totalSales || 0" /></el-card>
@@ -169,8 +168,7 @@
             </el-table>
           </el-card>
           <el-empty v-else description="暂无销售数据" style="margin-top: 24px" />
-        </el-tab-pane>
-      </el-tabs>
+        </div>
     </el-card>
 
     <!-- 商品发布/编辑弹窗 -->
@@ -297,7 +295,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getMyShop, updateMyShop, getMerchantProductPage, addMerchantProduct, updateMerchantProduct,
@@ -305,8 +304,9 @@ import {
 } from '../api/merchant'
 import { getCategoryTree, getBrandList, getProductDetail } from '../api/product'
 
+const route = useRoute()
 const placeholder = 'https://via.placeholder.com/80'
-const activeTab = ref('shop')
+const activeTab = ref(route.query.tab || 'shop')
 
 // ===== 店铺 =====
 const shop = ref(null)
@@ -498,10 +498,29 @@ async function loadMeta() {
   } catch (e) { /* 忽略 */ }
 }
 
-onMounted(async () => {
-  await loadShop()
+/** 侧边栏菜单切换：按 tab 加载对应区块数据 */
+function onTabChange(tab) {
+  const loaders = {
+    shop: loadShop,
+    products: loadProducts,
+    orders: loadOrders,
+    stats: loadStats
+  }
+  loaders[tab]?.()
+}
+
+// 侧边栏菜单（路由 query.tab）驱动内容切换
+watch(() => route.query.tab, (tab) => {
+  const next = tab || 'shop'
+  if (next !== activeTab.value) {
+    activeTab.value = next
+    onTabChange(next)
+  }
+})
+
+onMounted(() => {
   loadMeta()
-  if (activeTab.value === 'product') loadProducts()
+  onTabChange(activeTab.value)
 })
 </script>
 

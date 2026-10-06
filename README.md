@@ -23,6 +23,8 @@
     │                   ├ 其余为按接口文档建好的骨架（README 见 code/backend/README.md）
     └── frontend/      Vue3 + Vite + Element Plus + Pinia
                         ├ 登录/注册/首页/商品/详情/导购聊天/购物车/结算/订单 已就绪（README 见 code/frontend/README.md）
+                        ├ 三端分离：商城(MainLayout，仅用户) / 商家工作台(MerchantLayout) / 管理后台(AdminLayout)
+                        ├ 登录后按角色自动跳转各自端首页；越权访问提示无权限并回跳
 ```
 
 ## 技术栈

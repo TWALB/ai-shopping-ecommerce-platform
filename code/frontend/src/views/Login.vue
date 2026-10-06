@@ -42,6 +42,13 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+/** 各角色端首页 */
+function homeOf(role) {
+  if (role === 1) return '/merchant'
+  if (role === 2) return '/admin'
+  return '/home'
+}
+
 async function handleLogin() {
   loading.value = true
   try {
@@ -49,7 +56,7 @@ async function handleLogin() {
     userStore.setToken(data.token)
     userStore.setUserInfo(data.user)
     ElMessage.success('登录成功')
-    router.push('/home')
+    router.push(homeOf(data.user.role))
   } catch (e) { /* 错误已统一提示 */ } finally {
     loading.value = false
   }
@@ -62,7 +69,7 @@ async function handleRegister() {
     userStore.setToken(data.token)
     userStore.setUserInfo(data.user)
     ElMessage.success('注册成功')
-    router.push('/home')
+    router.push(homeOf(data.user.role))
   } catch (e) { /* 错误已统一提示 */ } finally {
     loading.value = false
   }

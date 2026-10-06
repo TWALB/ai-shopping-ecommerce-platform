@@ -8,9 +8,7 @@
         <el-menu-item index="/chat">智能导购</el-menu-item>
         <el-menu-item index="/cart">购物车</el-menu-item>
         <el-menu-item index="/orders">我的订单</el-menu-item>
-        <el-menu-item index="/merchant/apply" v-if="userStore.userInfo?.role === 0">商家入驻</el-menu-item>
-        <el-menu-item index="/merchant" v-if="userStore.userInfo?.role === 1">商家中心</el-menu-item>
-        <el-menu-item index="/admin" v-if="userStore.userInfo?.role === 2">管理后台</el-menu-item>
+        <el-menu-item index="/merchant/apply">商家入驻</el-menu-item>
       </el-menu>
       <div class="user-area">
         <el-dropdown @command="handleCommand">

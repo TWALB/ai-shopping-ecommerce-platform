@@ -1,9 +1,8 @@
 <template>
   <div class="admin-page">
     <el-card>
-      <el-tabs v-model="activeTab" @tab-change="onTabChange">
-        <!-- 数据总览 -->
-        <el-tab-pane label="数据总览" name="stats">
+      <!-- 数据总览 -->
+      <div v-show="activeTab === 'stats'">
           <el-row :gutter="16">
             <el-col :span="6" v-for="s in overviewCards" :key="s.label">
               <el-card class="stat-card">
@@ -23,10 +22,10 @@
             </template>
             <div ref="trendChartRef" class="trend-chart" />
           </el-card>
-        </el-tab-pane>
+        </div>
 
         <!-- 用户管理 -->
-        <el-tab-pane label="用户管理" name="users">
+        <div v-show="activeTab === 'users'">
           <div class="tool-row">
             <el-input v-model="userKeyword" placeholder="账号/昵称/手机号" clearable style="width: 200px" @keyup.enter="searchUsers" @clear="searchUsers" />
             <el-select v-model="userRole" placeholder="角色" clearable style="width: 130px" @change="searchUsers">
@@ -82,10 +81,10 @@
           </el-table>
           <el-pagination v-if="userTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="userTotal" :page-size="pageSize" v-model:current-page="userPageNum" @current-change="loadUsers" />
-        </el-tab-pane>
+        </div>
 
         <!-- 入驻审核 -->
-        <el-tab-pane label="入驻审核" name="applies">
+        <div v-show="activeTab === 'applies'">
           <div class="tool-row">
             <el-select v-model="applyStatus" placeholder="审核状态" clearable style="width: 150px" @change="searchApplies">
               <el-option :value="0" label="待审核" />
@@ -124,10 +123,10 @@
           </el-table>
           <el-pagination v-if="applyTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="applyTotal" :page-size="pageSize" v-model:current-page="applyPageNum" @current-change="loadApplies" />
-        </el-tab-pane>
+        </div>
 
         <!-- 商品管理 -->
-        <el-tab-pane label="商品管理" name="products">
+        <div v-show="activeTab === 'products'">
           <div class="tool-row">
             <el-radio-group v-model="productStatus" @change="searchProducts">
               <el-radio-button :value="''">全部</el-radio-button>
@@ -167,10 +166,10 @@
           </el-table>
           <el-pagination v-if="productTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="productTotal" :page-size="pageSize" v-model:current-page="productPageNum" @current-change="loadProducts" />
-        </el-tab-pane>
+        </div>
 
         <!-- 订单管理 -->
-        <el-tab-pane label="订单管理" name="orders">
+        <div v-show="activeTab === 'orders'">
           <div class="tool-row">
             <el-input v-model="orderNo" placeholder="订单号精确查询" clearable style="width: 220px" @keyup.enter="searchOrders" @clear="searchOrders" />
             <el-select v-model="orderStatus" placeholder="订单状态" clearable style="width: 130px" @change="searchOrders">
@@ -196,10 +195,10 @@
           </el-table>
           <el-pagination v-if="orderTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="orderTotal" :page-size="pageSize" v-model:current-page="orderPageNum" @current-change="loadOrders" />
-        </el-tab-pane>
+        </div>
 
         <!-- 售后管理 -->
-        <el-tab-pane label="售后管理" name="aftersales">
+        <div v-show="activeTab === 'aftersales'">
           <div class="tool-row">
             <el-select v-model="afterSaleStatus" placeholder="售后状态" clearable style="width: 160px" @change="searchAfterSales">
               <el-option :value="0" label="待商家处理" />
@@ -232,10 +231,10 @@
           </el-table>
           <el-pagination v-if="afterSaleTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="afterSaleTotal" :page-size="pageSize" v-model:current-page="afterSalePageNum" @current-change="loadAfterSales" />
-        </el-tab-pane>
+        </div>
 
         <!-- 公告管理 -->
-        <el-tab-pane label="公告管理" name="notices">
+        <div v-show="activeTab === 'notices'">
           <div class="tool-row">
             <el-button type="primary" @click="openNoticeDialog">+ 发布公告</el-button>
           </div>
@@ -257,10 +256,10 @@
           </el-table>
           <el-pagination v-if="noticeTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="noticeTotal" :page-size="pageSize" v-model:current-page="noticePageNum" @current-change="loadNotices" />
-        </el-tab-pane>
+        </div>
 
         <!-- 评价审核（评价模块） -->
-        <el-tab-pane label="评价审核" name="comments">
+        <div v-show="activeTab === 'comments'">
           <div class="filter-row">
             <el-select v-model="statusFilter" placeholder="审核状态" clearable style="width: 160px" @change="loadComments">
               <el-option label="待审核" :value="0" />
@@ -303,10 +302,10 @@
           <el-pagination v-if="commentTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="commentTotal" :page-size="commentPageSize" v-model:current-page="commentPageNum"
                          @current-change="loadComments" />
-        </el-tab-pane>
+        </div>
 
         <!-- 操作日志 -->
-        <el-tab-pane label="操作日志" name="logs">
+        <div v-show="activeTab === 'logs'">
           <div class="tool-row">
             <el-input v-model="logUsername" placeholder="操作人" clearable style="width: 150px" @keyup.enter="searchLogs" @clear="searchLogs" />
             <el-input v-model="logModule" placeholder="模块（如 用户/审核/商品）" clearable style="width: 180px" @keyup.enter="searchLogs" @clear="searchLogs" />
@@ -324,8 +323,7 @@
           </el-table>
           <el-pagination v-if="logTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="logTotal" :page-size="pageSize" v-model:current-page="logPageNum" @current-change="loadLogs" />
-        </el-tab-pane>
-      </el-tabs>
+        </div>
     </el-card>
 
     <!-- 拒绝入驻弹窗 -->
@@ -363,7 +361,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
 import {
@@ -374,8 +373,9 @@ import {
 } from '../api/admin'
 import { getCommentPage, auditComment as auditCommentApi } from '../api/comment'
 
+const route = useRoute()
 const placeholder = 'https://via.placeholder.com/80'
-const activeTab = ref('stats')
+const activeTab = ref(route.query.tab || 'stats')
 const pageSize = 10
 
 // ===== 数据总览 =====
@@ -722,7 +722,7 @@ function searchLogs() {
   loadLogs()
 }
 
-// ===== Tab 切换 =====
+// ===== Tab 切换（侧边栏菜单由路由 query.tab 驱动）=====
 function onTabChange(name) {
   const loaders = {
     stats: () => { loadOverview(); loadTrend() },
@@ -738,9 +738,16 @@ function onTabChange(name) {
   loaders[name]?.()
 }
 
+watch(() => route.query.tab, (tab) => {
+  const next = tab || 'stats'
+  if (next !== activeTab.value) {
+    activeTab.value = next
+    onTabChange(next)
+  }
+})
+
 onMounted(() => {
-  loadOverview()
-  loadTrend()
+  onTabChange(activeTab.value)
   window.addEventListener('resize', () => chart?.resize())
 })
 </script>
