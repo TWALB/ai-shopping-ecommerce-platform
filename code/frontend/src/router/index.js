@@ -19,6 +19,8 @@ const routes = [
       { path: 'checkout', component: () => import('../views/Checkout.vue'), meta: { title: '结算' } },
       { path: 'orders', component: () => import('../views/OrderList.vue'), meta: { title: '我的订单' } },
       { path: 'orders/:id', component: () => import('../views/OrderDetail.vue'), meta: { title: '订单详情' } },
+      { path: 'merchant/apply', component: () => import('../views/MerchantApply.vue'), meta: { title: '商家入驻' } },
+      { path: 'merchant', component: () => import('../views/MerchantCenter.vue'), meta: { title: '商家中心' } },
       { path: 'admin', component: () => import('../views/AdminDashboard.vue'), meta: { title: '管理后台' } }
     ]
   }
