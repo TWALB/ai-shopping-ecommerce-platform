@@ -73,8 +73,33 @@
       <template #header>
         <b>商品评价（{{ detail.commentSummary.total }}）</b>
         <span class="score">商品均分 {{ detail.commentSummary.avgProductScore?.toFixed(1) }}</span>
+        <span class="score">物流均分 {{ detail.commentSummary.avgLogisticsScore?.toFixed(1) }}</span>
       </template>
-      <el-empty description="暂无评价（评价模块开发后展示）" />
+
+      <el-empty v-if="!comments.length" description="暂无评价，购买后记得回来评价哦" />
+
+      <div class="comment" v-for="c in comments" :key="c.id">
+        <div class="c-head">
+          <b class="c-nick">{{ c.nickname }}</b>
+          <el-rate :model-value="c.productScore" disabled size="small" />
+          <span class="c-label">商品</span>
+          <el-rate :model-value="c.logisticsScore" disabled size="small" />
+          <span class="c-label">物流</span>
+          <span class="c-time">{{ c.createdTime?.replace('T', ' ') }}</span>
+        </div>
+        <div class="c-content">{{ c.content || '此用户没有填写评价内容' }}</div>
+        <div class="c-imgs" v-if="c.imageUrls">
+          <el-image v-for="(u, i) in c.imageUrls.split(',')" :key="i" :src="u" fit="cover" class="c-img"
+                    :preview-src-list="c.imageUrls.split(',')" preview-teleported />
+        </div>
+        <div v-if="c.replyContent" class="c-reply">
+          商家回复：{{ c.replyContent }}
+        </div>
+      </div>
+
+      <el-pagination v-if="commentTotal > 0" class="pager" background layout="prev, pager, next"
+                     :total="commentTotal" :page-size="commentPageSize" v-model:current-page="commentPageNum"
+                     @current-change="loadComments" />
     </el-card>
 
     <el-button class="back-btn" @click="$router.back()">← 返回</el-button>
@@ -87,6 +112,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getProductDetail } from '../api/product'
 import { addToCart } from '../api/cart'
+import { getProductComments } from '../api/comment'
 
 const route = useRoute()
 const router = useRouter()
@@ -94,6 +120,10 @@ const detail = ref(null)
 const selectedSkuId = ref(null)
 const quantity = ref(1)
 const isFavorite = ref(false)
+const comments = ref([])
+const commentTotal = ref(0)
+const commentPageNum = ref(1)
+const commentPageSize = 5
 const placeholder = 'https://via.placeholder.com/400'
 
 const maxStock = computed(() => {
@@ -108,6 +138,15 @@ const maxStock = computed(() => {
 async function load() {
   detail.value = await getProductDetail(route.params.id)
   if (detail.value.skus.length) selectedSkuId.value = detail.value.skus[0].id
+  loadComments()
+}
+
+async function loadComments() {
+  try {
+    const data = await getProductComments(route.params.id, { pageNum: commentPageNum.value, pageSize: commentPageSize })
+    comments.value = data.list || []
+    commentTotal.value = data.total || 0
+  } catch (e) { /* 忽略 */ }
 }
 
 async function addCart() {
@@ -157,5 +196,15 @@ onMounted(load)
 .attr-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .attr-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
 .attr-name { width: 140px; color: #64748b; background: #f8fafc; }
+.comment { border-bottom: 1px solid #f1f5f9; padding: 12px 0; }
+.c-head { display: flex; align-items: center; gap: 12px; }
+.c-nick { font-weight: 600; }
+.c-label { color: #94a3b8; font-size: 12px; }
+.c-time { margin-left: auto; color: #94a3b8; font-size: 12px; }
+.c-content { color: #475569; margin-top: 6px; line-height: 1.6; }
+.c-imgs { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.c-img { width: 84px; height: 84px; border-radius: 6px; }
+.c-reply { background: #f8fafc; border-radius: 6px; padding: 8px 12px; margin-top: 8px; color: #2563eb; font-size: 13px; }
+.pager { margin-top: 12px; justify-content: flex-end; }
 .back-btn { margin-top: 20px; }
 </style>

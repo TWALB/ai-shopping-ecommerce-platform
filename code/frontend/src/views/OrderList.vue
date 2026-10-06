@@ -28,6 +28,7 @@
           <el-button v-if="o.status === 0" type="primary" size="small" @click="$router.push(`/orders/${o.id}?pay=1`)">去支付</el-button>
           <el-button v-if="o.status === 0" size="small" @click="cancel(o)">取消订单</el-button>
           <el-button v-if="o.status === 2" type="success" size="small" @click="confirm(o)">确认收货</el-button>
+          <el-button v-if="o.status === 3" type="warning" size="small" @click="$router.push(`/orders/${o.id}?comment=1`)">去评价</el-button>
           <el-button size="small" @click="$router.push(`/orders/${o.id}`)">查看详情</el-button>
         </div>
       </div>

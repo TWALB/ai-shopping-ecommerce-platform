@@ -10,6 +10,7 @@
         <el-button v-if="detail.status === 0" type="primary" size="large" @click="openPay">立即支付 ¥{{ detail.payAmount }}</el-button>
         <el-button v-if="detail.status === 0" size="large" @click="cancel">取消订单</el-button>
         <el-button v-if="detail.status === 2" type="success" size="large" @click="confirm">确认收货</el-button>
+        <el-button v-if="detail.status === 3" type="warning" size="large" @click="openComment">评价商品</el-button>
       </div>
     </el-card>
 
@@ -65,6 +66,29 @@
         <el-button type="primary" :loading="paying" @click="doPay">确认支付</el-button>
       </template>
     </el-dialog>
+
+    <!-- 评价弹窗 -->
+    <el-dialog v-model="commentDialog" title="评价商品" width="640px">
+      <div class="comment-item" v-for="it in detail.items" :key="it.orderItemId">
+        <div class="ci-head">
+          <b>{{ it.productName }}</b>
+          <span class="ci-sku">{{ it.skuName }}</span>
+        </div>
+        <div class="ci-form">
+          <span>商品评分</span>
+          <el-rate v-model="commentForms[it.orderItemId].productScore" />
+          <span class="ci-gap">物流评分</span>
+          <el-rate v-model="commentForms[it.orderItemId].logisticsScore" />
+          <el-checkbox v-model="commentForms[it.orderItemId].isAnonymous" class="ci-anon">匿名</el-checkbox>
+        </div>
+        <el-input v-model="commentForms[it.orderItemId].content" type="textarea" :rows="2"
+                  placeholder="说说使用感受吧（选填）" maxlength="500" show-word-limit />
+      </div>
+      <template #footer>
+        <el-button @click="commentDialog = false">取消</el-button>
+        <el-button type="primary" :loading="commenting" @click="submitComments">提交评价</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -73,6 +97,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getOrderDetail, cancelOrder, confirmOrder, getOrderTrack, payOrder } from '../api/order'
+import { submitComment } from '../api/comment'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,6 +105,9 @@ const detail = ref(null)
 const tracks = ref([])
 const payDialog = ref(false)
 const paying = ref(false)
+const commentDialog = ref(false)
+const commenting = ref(false)
+const commentForms = ref({})
 const placeholder = 'https://via.placeholder.com/80'
 
 const statusMap = { 0: '待付款', 1: '待发货', 2: '待收货', 3: '已完成', 4: '已取消', 5: '售后中' }
@@ -126,9 +154,43 @@ async function confirm() {
   load()
 }
 
+function openComment() {
+  const forms = {}
+  detail.value.items.forEach((it) => {
+    forms[it.orderItemId] = { productScore: 5, logisticsScore: 5, content: '', isAnonymous: false }
+  })
+  commentForms.value = forms
+  commentDialog.value = true
+}
+
+async function submitComments() {
+  commenting.value = true
+  try {
+    for (const it of detail.value.items) {
+      const f = commentForms.value[it.orderItemId]
+      if (!f || !f.productScore) continue
+      await submitComment({
+        orderId: detail.value.id,
+        orderItemId: it.orderItemId,
+        productScore: f.productScore,
+        logisticsScore: f.logisticsScore,
+        content: f.content,
+        isAnonymous: f.isAnonymous
+      })
+    }
+    ElMessage.success('评价成功！')
+    commentDialog.value = false
+  } catch (e) {
+    /* 错误已统一提示 */
+  } finally {
+    commenting.value = false
+  }
+}
+
 onMounted(() => {
   load()
   if (route.query.pay === '1') openPay()
+  if (route.query.comment === '1') openComment()
 })
 </script>
 
@@ -156,4 +218,9 @@ onMounted(() => {
 .pay-box { text-align: center; padding: 20px 0; }
 .pay-amount-big { color: #dc2626; font-size: 32px; font-weight: 800; }
 .pay-tip { color: #94a3b8; margin-top: 8px; font-size: 13px; }
+.comment-item { border: 1px solid #f1f5f9; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.ci-head { margin-bottom: 8px; }
+.ci-sku { color: #94a3b8; font-size: 12px; margin-left: 8px; }
+.ci-form { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 13px; color: #64748b; }
+.ci-anon { margin-left: auto; }
 </style>

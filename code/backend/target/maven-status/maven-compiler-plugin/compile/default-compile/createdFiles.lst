@@ -22,6 +22,7 @@ com\digitalmall\common\Result.class
 com\digitalmall\DigitalMallApplication.class
 com\digitalmall\security\JwtUtil.class
 com\digitalmall\controller\PaymentController.class
+com\digitalmall\service\impl\CommentServiceImpl.class
 com\digitalmall\controller\CommentController.class
 com\digitalmall\common\GlobalExceptionHandler.class
 com\digitalmall\entity\Product.class
@@ -33,11 +34,13 @@ com\digitalmall\security\UserContext.class
 com\digitalmall\controller\ProductController.class
 com\digitalmall\dto\LoginRequest.class
 com\digitalmall\vo\CommentSummaryVO.class
+com\digitalmall\dto\SubmitCommentRequest.class
 com\digitalmall\common\BusinessException.class
 com\digitalmall\config\WebConfig.class
 com\digitalmall\entity\Comment.class
 com\digitalmall\security\RequireRole.class
 com\digitalmall\controller\MerchantController.class
+com\digitalmall\vo\CommentVO.class
 com\digitalmall\security\JwtInterceptor.class
 com\digitalmall\entity\SysUser.class
 com\digitalmall\mapper\SysUserMapper.class
@@ -50,4 +53,5 @@ com\digitalmall\config\MybatisPlusConfig.class
 com\digitalmall\entity\ProductAttr.class
 com\digitalmall\service\ProductService.class
 com\digitalmall\controller\UserController.class
+com\digitalmall\service\CommentService.class
 com\digitalmall\mapper\CategoryMapper.class
