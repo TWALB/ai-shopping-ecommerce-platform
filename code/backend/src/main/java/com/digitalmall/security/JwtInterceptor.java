@@ -1,6 +1,8 @@
 package com.digitalmall.security;
 
 import com.digitalmall.common.BusinessException;
+import com.digitalmall.entity.SysUser;
+import com.digitalmall.mapper.SysUserMapper;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,14 +14,17 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * JWT 登录鉴权拦截器：
  * 1. 接口标注 @RequireRole → 校验 Token + 角色权限
  * 2. 未标注 → 公开接口直接放行
+ * 3. 每次请求实时校验用户状态与角色（禁用即失效、调整角色即时生效）
  */
 @Component
 public class JwtInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final SysUserMapper sysUserMapper;
 
-    public JwtInterceptor(JwtUtil jwtUtil) {
+    public JwtInterceptor(JwtUtil jwtUtil, SysUserMapper sysUserMapper) {
         this.jwtUtil = jwtUtil;
+        this.sysUserMapper = sysUserMapper;
     }
 
     @Override
@@ -43,14 +48,21 @@ public class JwtInterceptor implements HandlerInterceptor {
         try {
             Claims claims = jwtUtil.parseToken(auth.substring(7));
             Long userId = Long.valueOf(claims.getSubject());
-            String username = claims.get("username", String.class);
-            Integer role = claims.get("role", Integer.class);
-            UserContext.set(new UserContext.CurrentUser(userId, username, role));
 
-            // 角色校验
+            // 实时校验用户状态与角色（管理员禁用/改角色即时生效）
+            SysUser user = sysUserMapper.selectById(userId);
+            if (user == null) {
+                throw new BusinessException(401, "账号不存在");
+            }
+            if (user.getStatus() == null || user.getStatus() != 1) {
+                throw new BusinessException(401, "账号已被禁用");
+            }
+            UserContext.set(new UserContext.CurrentUser(user.getId(), user.getUsername(), user.getRole()));
+
+            // 角色校验（以数据库实时角色为准）
             boolean allowed = false;
             for (int r : requireRole.value()) {
-                if (r == role) {
+                if (r == user.getRole()) {
                     allowed = true;
                     break;
                 }

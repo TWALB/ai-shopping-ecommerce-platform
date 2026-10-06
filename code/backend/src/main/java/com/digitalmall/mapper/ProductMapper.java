@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.digitalmall.entity.Product;
+import com.digitalmall.vo.AdminProductVO;
 import com.digitalmall.vo.MerchantProductVO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -26,4 +27,16 @@ public interface ProductMapper extends BaseMapper<Product> {
     IPage<MerchantProductVO> selectMerchantProductPage(Page<MerchantProductVO> page,
                                                        @Param("shopId") Long shopId,
                                                        @Param("status") Integer status);
+
+    /** 平台商品管理分页（含店铺名，按状态筛选） */
+    @Select("<script>" +
+            "SELECT p.id, p.product_name, p.main_image, p.price, p.stock, p.sales, p.status, " +
+            "p.created_time, s.shop_name " +
+            "FROM product p JOIN shop s ON p.shop_id = s.id " +
+            "<where>" +
+            "<if test='status != null'> AND p.status = #{status} </if>" +
+            "</where>" +
+            "ORDER BY p.created_time DESC" +
+            "</script>")
+    IPage<AdminProductVO> selectAdminProductPage(Page<AdminProductVO> page, @Param("status") Integer status);
 }

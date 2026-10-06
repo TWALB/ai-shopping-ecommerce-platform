@@ -38,4 +38,21 @@ public interface OrderMapper extends BaseMapper<Order> {
     IPage<MerchantOrderVO> selectMerchantOrderPage(Page<MerchantOrderVO> page,
                                                    @Param("shopId") Long shopId,
                                                    @Param("status") Integer status);
+
+    /** 平台订单分页（含店铺名/件数/首图），支持状态与订单号筛选 */
+    @Select("<script>" +
+            "SELECT o.id, o.order_no, o.shop_id, s.shop_name, o.status, o.total_amount, o.freight_amount, " +
+            "o.pay_amount, o.created_time, " +
+            "(SELECT COUNT(*) FROM order_item oi WHERE oi.order_id = o.id) AS item_count, " +
+            "(SELECT MIN(oi2.product_image) FROM order_item oi2 WHERE oi2.order_id = o.id) AS first_image " +
+            "FROM `order` o JOIN shop s ON o.shop_id = s.id " +
+            "<where>" +
+            "<if test='status != null'> AND o.status = #{status} </if>" +
+            "<if test='orderNo != null and orderNo != \"\"'> AND o.order_no = #{orderNo} </if>" +
+            "</where>" +
+            "ORDER BY o.created_time DESC" +
+            "</script>")
+    IPage<OrderVO> selectAdminOrderPage(Page<OrderVO> page,
+                                        @Param("status") Integer status,
+                                        @Param("orderNo") String orderNo);
 }

@@ -1,0 +1,1 @@
+import{r as m}from"./request-BcI7NaYV.js";const s=t=>m.post("/comment",t),n=(t,o)=>m.get(`/comment/product/${t}`,{params:o}),a=t=>m.get("/comment/page",{params:t}),c=(t,o)=>m.put(`/comment/${t}/status`,null,{params:{status:o}});export{a,c as b,n as g,s};

@@ -42,11 +42,10 @@ const router = useRouter()
 const userStore = useUserStore()
 
 onMounted(async () => {
-  if (!userStore.userInfo) {
-    try {
-      userStore.setUserInfo(await getMe())
-    } catch (e) { /* 未登录已由守卫处理 */ }
-  }
+  try {
+    // 每次进入刷新用户信息（角色/状态以服务端为准，审核通过、角色调整后即时生效）
+    userStore.setUserInfo(await getMe())
+  } catch (e) { /* 未登录已由守卫处理 */ }
 })
 
 function handleCommand(command) {
