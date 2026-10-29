@@ -1,0 +1,5 @@
+import{r as a}from"./request-Dgxi9-o8.js";const b=e=>a.post("/chat/session",null,{params:{title:e}}),J=()=>a.get("/chat/session/page"),N=e=>a.get("/chat/message/page",{params:{sessionId:e}}),k=()=>a.get("/chat/hot-questions"),v=(e=!1)=>a.post("/chat/knowledge/sync",null,{params:{full:e}});async function P(e){const{sessionId:f,content:g,onIntent:o,onProducts:r,onAnswer:c,onDone:i}=e,h=(await fetch("/api/chat/send?"+new URLSearchParams({sessionId:f,content:g}),{method:"POST",headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}})).body.getReader(),m=new TextDecoder("utf-8");let d="";for(;;){const{done:u,value:S}=await h.read();if(u)break;d+=m.decode(S,{stream:!0});const p=d.split(`
+
+`);d=p.pop();for(const w of p){let s="message";const l=[];for(const t of w.split(`
+`))t.startsWith("event:")&&(s=t.slice(6).trim()),t.startsWith("data:")&&l.push(t.slice(5).trim());if(!l.length)continue;const n=l.join(`
+`);try{s==="intent"?o==null||o(JSON.parse(n)):s==="products"?r==null||r(JSON.parse(n)):s==="answer"?c==null||c(JSON.parse(n)):s==="done"&&(i==null||i(JSON.parse(n)))}catch{}}}}export{J as a,N as b,b as c,v as d,k as g,P as s};
