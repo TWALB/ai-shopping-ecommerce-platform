@@ -134,6 +134,9 @@
               <el-radio-button :value="1">已上架</el-radio-button>
               <el-radio-button :value="2">已下架</el-radio-button>
             </el-radio-group>
+            <el-button type="primary" plain :loading="syncing" class="right-btn" @click="handleSyncKnowledge">
+              重建导购知识库
+            </el-button>
           </div>
           <el-table :data="products" v-loading="productLoading" stripe>
             <el-table-column label="商品" min-width="220">
@@ -372,6 +375,7 @@ import {
   getOperationLogPage
 } from '../api/admin'
 import { getCommentPage, auditComment as auditCommentApi } from '../api/comment'
+import { syncKnowledge } from '../api/chat'
 
 const route = useRoute()
 const placeholder = 'https://via.placeholder.com/80'
@@ -550,6 +554,19 @@ async function toggleProduct(row, status) {
   await setAdminProductStatus(row.id, status)
   ElMessage.success(status === 1 ? '已上架' : '已下架')
   loadProducts()
+}
+
+// 重建导购知识库（商品向量化）
+const syncing = ref(false)
+async function handleSyncKnowledge() {
+  await ElMessageBox.confirm('将遍历全部上架商品并调用 Embedding 重建导购向量库，确认执行？', '知识库同步', { type: 'warning' })
+  syncing.value = true
+  try {
+    const count = await syncKnowledge(true)
+    ElMessage.success(`向量化完成，共处理 ${count} 件商品`)
+  } catch (e) { /* 错误已统一提示（未配置 API Key 时会提示） */ } finally {
+    syncing.value = false
+  }
 }
 
 // ===== 订单管理 =====
@@ -759,6 +776,7 @@ onMounted(() => {
 .trend-head { display: flex; align-items: center; justify-content: space-between; }
 .trend-chart { height: 320px; }
 .tool-row { display: flex; gap: 12px; margin-bottom: 14px; align-items: center; }
+.right-btn { margin-left: auto; }
 .filter-row { display: flex; gap: 12px; margin-bottom: 14px; }
 .prod-cell { display: flex; align-items: center; gap: 10px; }
 .prod-img { width: 52px; height: 52px; border-radius: 6px; }

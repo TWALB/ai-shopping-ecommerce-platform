@@ -19,7 +19,7 @@
               <div>{{ m.content }}</div>
               <!-- 推荐商品卡片 -->
               <div v-if="m.role === 1 && m.productCards && m.productCards.length" class="cards">
-                <div v-for="p in m.productCards" :key="p.id" class="mini-card" @click="$router.push('/products')">
+                <div v-for="p in m.productCards" :key="p.id" class="mini-card" @click="$router.push(`/products/${p.id}`)">
                   <div class="mini-name">{{ p.productName }}</div>
                   <div class="mini-price">¥{{ p.price }}</div>
                 </div>
@@ -92,7 +92,9 @@ async function loadMessages() {
       role: m.role,
       content: m.content,
       intent: m.intent,
-      productCards: m.productIds ? m.productIds.map((id) => ({ id, productName: `商品 #${id}`, price: '--' })) : []
+      productCards: (m.products && m.products.length)
+        ? m.products.map((p) => ({ id: p.id, productName: p.productName, price: p.price }))
+        : (m.productIds ? m.productIds.map((id) => ({ id, productName: `商品 #${id}`, price: '--' })) : [])
     }))
     scrollBottom()
   } catch (e) { /* 后端未实现 */ }
@@ -126,7 +128,7 @@ async function send(text) {
       onDone: () => { aiMsg.content = aiMsg.content || '（导购暂未返回内容）' }
     })
   } catch (e) {
-    ElMessage.error('导购服务暂不可用（后端 /chat/send 待开发）')
+    ElMessage.error('导购服务暂不可用，请确认后端已启动')
     messages.value.pop()
   } finally {
     loading.value = false

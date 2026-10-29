@@ -4,8 +4,11 @@ com\digitalmall\controller\OrderController.class
 com\digitalmall\entity\Brand.class
 com\digitalmall\vo\MerchantApplyStatusVO.class
 com\digitalmall\mapper\ProductMapper.class
+com\digitalmall\vo\ChatSessionVO.class
+com\digitalmall\service\ProductRetrievalService.class
 com\digitalmall\common\PageResult.class
 com\digitalmall\entity\ProductSku.class
+com\digitalmall\service\LlmClient$1.class
 com\digitalmall\mapper\ProductImageMapper.class
 com\digitalmall\service\AuthService.class
 com\digitalmall\mapper\CommentMapper.class
@@ -16,6 +19,7 @@ com\digitalmall\vo\MerchantProductVO.class
 com\digitalmall\DigitalMallApplication.class
 com\digitalmall\entity\OperationLog.class
 com\digitalmall\mapper\MerchantStatsMapper.class
+com\digitalmall\service\ChatService.class
 com\digitalmall\security\JwtUtil.class
 com\digitalmall\mapper\AdminStatsMapper.class
 com\digitalmall\controller\PaymentController.class
@@ -26,6 +30,8 @@ com\digitalmall\entity\Category.class
 com\digitalmall\mapper\OperationLogMapper.class
 com\digitalmall\controller\ProductController.class
 com\digitalmall\dto\LoginRequest.class
+com\digitalmall\entity\ChatSession.class
+com\digitalmall\mapper\ChatSessionMapper.class
 com\digitalmall\dto\SubmitCommentRequest.class
 com\digitalmall\vo\StatsOverviewVO.class
 com\digitalmall\entity\MerchantApply.class
@@ -39,6 +45,7 @@ com\digitalmall\entity\SysUser.class
 com\digitalmall\mapper\SysUserMapper.class
 com\digitalmall\vo\ProductVO.class
 com\digitalmall\security\UserContext$CurrentUser.class
+com\digitalmall\vo\ChatDoneVO.class
 com\digitalmall\mapper\ProductAttrMapper.class
 com\digitalmall\config\MybatisPlusConfig.class
 com\digitalmall\vo\MerchantApplyAdminVO.class
@@ -48,6 +55,7 @@ com\digitalmall\entity\Notice.class
 com\digitalmall\service\ProductService.class
 com\digitalmall\vo\TrendPointVO.class
 com\digitalmall\controller\UserController.class
+com\digitalmall\service\IntentService.class
 com\digitalmall\controller\ChatController.class
 com\digitalmall\vo\ProductDetailVO.class
 com\digitalmall\mapper\MerchantApplyMapper.class
@@ -59,11 +67,14 @@ com\digitalmall\dto\ProductPublishRequest$ImageLine.class
 com\digitalmall\mapper\ShopMapper.class
 com\digitalmall\controller\AdminController.class
 com\digitalmall\vo\LoginVO.class
+com\digitalmall\mapper\ChatMessageMapper.class
 com\digitalmall\dto\NoticeRequest.class
 com\digitalmall\entity\ProductImage.class
 com\digitalmall\common\Result.class
+com\digitalmall\config\LlmProperties.class
 com\digitalmall\service\AdminService.class
 com\digitalmall\vo\AdminProductVO.class
+com\digitalmall\service\LlmClient.class
 com\digitalmall\controller\CommentController.class
 com\digitalmall\entity\Product.class
 com\digitalmall\entity\Shop.class
@@ -85,7 +96,11 @@ com\digitalmall\controller\MerchantController.class
 com\digitalmall\vo\NoticeVO.class
 com\digitalmall\controller\AfterSaleController.class
 com\digitalmall\vo\AfterSaleAdminVO.class
+com\digitalmall\vo\ChatMessageVO.class
+com\digitalmall\vo\ProductBriefVO.class
 com\digitalmall\mapper\AfterSaleMapper.class
+com\digitalmall\service\impl\ChatServiceImpl.class
 com\digitalmall\controller\AuthController.class
+com\digitalmall\entity\ChatMessage.class
 com\digitalmall\service\CommentService.class
 com\digitalmall\mapper\CategoryMapper.class

@@ -8,6 +8,7 @@ export const getSessionPage = () => request.get('/chat/session/page')
 export const deleteSession = (id) => request.delete(`/chat/session/${id}`)
 export const getMessagePage = (sessionId) => request.get('/chat/message/page', { params: { sessionId } })
 export const getHotQuestions = () => request.get('/chat/hot-questions')
+export const syncKnowledge = (full = false) => request.post('/chat/knowledge/sync', null, { params: { full } })
 
 /**
  * SSE 流式发送消息（原生 fetch，事件回调）
