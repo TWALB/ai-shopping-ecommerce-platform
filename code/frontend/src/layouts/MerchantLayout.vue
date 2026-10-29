@@ -6,6 +6,7 @@
         <el-menu-item index="/merchant?tab=shop">店铺信息</el-menu-item>
         <el-menu-item index="/merchant?tab=products">商品管理</el-menu-item>
         <el-menu-item index="/merchant?tab=orders">订单发货</el-menu-item>
+        <el-menu-item index="/merchant?tab=aftersales">售后处理</el-menu-item>
         <el-menu-item index="/merchant?tab=stats">经营统计</el-menu-item>
       </el-menu>
     </el-aside>

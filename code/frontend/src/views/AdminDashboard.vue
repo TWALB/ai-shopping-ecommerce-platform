@@ -231,6 +231,13 @@
             <el-table-column label="申请时间" width="160">
               <template #default="{ row }">{{ row.createdTime?.replace('T', ' ') }}</template>
             </el-table-column>
+            <el-table-column label="操作" width="160" fixed="right">
+              <template #default="{ row }">
+                <el-button v-if="row.status === 2" size="small" type="warning" @click="platformIntervene(row, 3)">介入处理</el-button>
+                <el-button v-if="row.status === 3" size="small" type="success" @click="platformIntervene(row, 4)">完成退款</el-button>
+                <span v-if="row.status !== 2 && row.status !== 3" class="empty-text">—</span>
+              </template>
+            </el-table-column>
           </el-table>
           <el-pagination v-if="afterSaleTotal > 0" class="pager" background layout="prev, pager, next, total"
                          :total="afterSaleTotal" :page-size="pageSize" v-model:current-page="afterSalePageNum" @current-change="loadAfterSales" />
@@ -375,6 +382,7 @@ import {
   getOperationLogPage
 } from '../api/admin'
 import { getCommentPage, auditComment as auditCommentApi } from '../api/comment'
+import { adminHandleAfterSale } from '../api/afterSale'
 import { syncKnowledge } from '../api/chat'
 
 const route = useRoute()
@@ -625,6 +633,17 @@ async function loadAfterSales() {
 }
 function searchAfterSales() {
   afterSalePageNum.value = 1
+  loadAfterSales()
+}
+
+/** 平台介入（3）或平台判定完成退款（4） */
+async function platformIntervene(row, targetStatus) {
+  const tip = targetStatus === 3
+    ? `确认受理售后单「${row.afterSaleNo}」的平台介入？`
+    : `确认判定「${row.afterSaleNo}」退款完成，并退款 ¥${row.amount}？`
+  await ElMessageBox.confirm(tip, '平台处理', { type: 'warning' })
+  await adminHandleAfterSale(row.id, { status: targetStatus, remark: '平台处理' })
+  ElMessage.success(targetStatus === 3 ? '已进入平台介入' : '已判定完成并退款')
   loadAfterSales()
 }
 

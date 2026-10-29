@@ -31,12 +31,30 @@
         <span class="i-price">¥{{ it.price }}</span>
         <span class="i-qty">×{{ it.quantity }}</span>
         <span class="i-sub">¥{{ it.totalAmount }}</span>
+        <span class="i-ops">
+          <el-tag v-if="runningAfterSale(it.orderItemId)" type="warning" size="small">售后处理中</el-tag>
+          <el-button v-else-if="detail.status === 2 || detail.status === 3" size="small" plain
+                     @click="openAfterSale(it)">申请售后</el-button>
+        </span>
       </div>
       <div class="amount-box">
         <div>商品金额：¥{{ detail.totalAmount }}</div>
         <div>运费：¥{{ detail.freightAmount }}</div>
         <div class="pay-amount">实付金额：<b>¥{{ detail.payAmount }}</b></div>
         <div v-if="detail.remark" class="remark">备注：{{ detail.remark }}</div>
+      </div>
+    </el-card>
+
+    <el-card v-if="afterSales.length" class="block">
+      <template #header><b>售后记录</b></template>
+      <div v-for="a in afterSales" :key="a.id" class="as-row">
+        <span class="as-no">{{ a.afterSaleNo }}</span>
+        <span class="as-name">{{ a.productName }}</span>
+        <span>{{ asTypeText(a.type) }}</span>
+        <span>¥{{ a.amount }}</span>
+        <el-tag :type="asStatusTag(a.status)" size="small">{{ asStatusText(a.status) }}</el-tag>
+        <span class="as-time">{{ a.createdTime?.replace('T', ' ') }}</span>
+        <el-button v-if="a.status === 0" link type="danger" @click="cancelAfterSaleItem(a)">撤销</el-button>
       </div>
     </el-card>
 
@@ -64,6 +82,32 @@
       <template #footer>
         <el-button @click="payDialog = false">取消</el-button>
         <el-button type="primary" :loading="paying" @click="doPay">确认支付</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 售后申请弹窗 -->
+    <el-dialog v-model="afterSaleDialog" title="申请售后" width="520px">
+      <el-form label-width="90px">
+        <el-form-item label="商品">{{ asForm.productName }}</el-form-item>
+        <el-form-item label="售后类型">
+          <el-radio-group v-model="asForm.type">
+            <el-radio :value="0">仅退款</el-radio>
+            <el-radio :value="1">退货退款</el-radio>
+            <el-radio :value="2">换货</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="asForm.type !== 2" label="退款金额">
+          <el-input-number v-model="asForm.amount" :min="0.01" :max="asForm.maxAmount" :precision="2" />
+          <span class="as-tip">该商品实付 ¥{{ asForm.maxAmount }}</span>
+        </el-form-item>
+        <el-form-item label="申请原因">
+          <el-input v-model="asForm.reason" type="textarea" :rows="3" maxlength="300" show-word-limit
+                    placeholder="请描述问题，便于商家快速处理" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="afterSaleDialog = false">取消</el-button>
+        <el-button type="primary" :loading="applying" @click="submitAfterSale">提交申请</el-button>
       </template>
     </el-dialog>
 
@@ -98,6 +142,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getOrderDetail, cancelOrder, confirmOrder, getOrderTrack, payOrder } from '../api/order'
 import { submitComment } from '../api/comment'
+import { applyAfterSale, getMyAfterSalePage, cancelAfterSale } from '../api/afterSale'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +155,77 @@ const commenting = ref(false)
 const commentForms = ref({})
 const placeholder = 'https://via.placeholder.com/80'
 
+// 售后
+const afterSales = ref([])
+const afterSaleDialog = ref(false)
+const applying = ref(false)
+const asForm = ref({ orderItemId: null, productName: '', type: 0, amount: 0, maxAmount: 0, reason: '' })
+const asStatusMap = { 0: '待商家处理', 1: '商家同意', 2: '商家拒绝', 3: '平台介入', 4: '已完成', 5: '已撤销' }
+const asTypeMap = { 0: '仅退款', 1: '退货退款', 2: '换货' }
+const asStatusText = (s) => asStatusMap[s] || '未知'
+const asTypeText = (t) => asTypeMap[t] || '售后'
+const asStatusTag = (s) => (s === 0 ? 'warning' : s === 1 ? 'success' : s === 2 ? 'danger'
+  : s === 3 ? 'primary' : s === 4 ? 'success' : 'info')
+
+/** 该明细是否有进行中的售后 */
+function runningAfterSale(orderItemId) {
+  return afterSales.value.some((a) => a.orderItemId === orderItemId && [0, 1, 3].includes(a.status))
+}
+
+async function loadAfterSales() {
+  if (!detail.value) return
+  try {
+    const data = await getMyAfterSalePage({ orderId: detail.value.id, pageNum: 1, pageSize: 20 })
+    afterSales.value = (data && data.list) || []
+  } catch (e) {
+    afterSales.value = []
+  }
+}
+
+function openAfterSale(item) {
+  const amount = Number(item.totalAmount || 0)
+  asForm.value = {
+    orderItemId: item.orderItemId,
+    productName: item.productName,
+    type: 0,
+    amount,
+    maxAmount: amount,
+    reason: ''
+  }
+  afterSaleDialog.value = true
+}
+
+async function submitAfterSale() {
+  if (!asForm.value.reason.trim()) {
+    ElMessage.warning('请填写申请原因')
+    return
+  }
+  applying.value = true
+  try {
+    await applyAfterSale({
+      orderId: detail.value.id,
+      orderItemId: asForm.value.orderItemId,
+      type: asForm.value.type,
+      reason: asForm.value.reason.trim(),
+      amount: asForm.value.type === 2 ? 0 : asForm.value.amount
+    })
+    ElMessage.success('售后申请已提交，等待商家处理')
+    afterSaleDialog.value = false
+    load()
+  } catch (e) {
+    /* 错误已统一提示 */
+  } finally {
+    applying.value = false
+  }
+}
+
+async function cancelAfterSaleItem(row) {
+  await ElMessageBox.confirm(`确定撤销售后单「${row.afterSaleNo}」吗？`, '提示', { type: 'warning' })
+  await cancelAfterSale(row.id)
+  ElMessage.success('已撤销')
+  load()
+}
+
 const statusMap = { 0: '待付款', 1: '待发货', 2: '待收货', 3: '已完成', 4: '已取消', 5: '售后中' }
 const statusText = (s) => statusMap[s] || '未知'
 
@@ -120,6 +236,7 @@ async function load() {
   } else {
     tracks.value = []
   }
+  await loadAfterSales()
 }
 
 function openPay() {
@@ -211,6 +328,12 @@ onMounted(() => {
 .i-price { color: #64748b; width: 80px; text-align: right; }
 .i-qty { width: 50px; text-align: center; color: #64748b; }
 .i-sub { width: 100px; text-align: right; font-weight: 600; }
+.i-ops { width: 96px; text-align: right; }
+.as-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; border-bottom: 1px dashed #f1f5f9; font-size: 13px; color: #64748b; }
+.as-no { font-family: monospace; color: #334155; }
+.as-name { flex: 1; color: #334155; }
+.as-time { color: #94a3b8; }
+.as-tip { color: #94a3b8; font-size: 12px; margin-left: 10px; }
 .amount-box { text-align: right; padding-top: 12px; color: #64748b; line-height: 1.8; }
 .pay-amount { font-size: 15px; color: #334155; }
 .pay-amount b { color: #dc2626; font-size: 20px; }

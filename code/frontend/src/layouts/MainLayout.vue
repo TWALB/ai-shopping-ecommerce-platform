@@ -8,6 +8,7 @@
         <el-menu-item index="/chat">智能导购</el-menu-item>
         <el-menu-item index="/cart">购物车</el-menu-item>
         <el-menu-item index="/orders">我的订单</el-menu-item>
+        <el-menu-item index="/after-sales">我的售后</el-menu-item>
         <el-menu-item index="/merchant/apply">商家入驻</el-menu-item>
       </el-menu>
       <div class="user-area">

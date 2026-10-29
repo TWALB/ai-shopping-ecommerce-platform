@@ -7,7 +7,9 @@ import com.digitalmall.dto.ProductPublishRequest;
 import com.digitalmall.dto.ShopUpdateRequest;
 import com.digitalmall.entity.Shop;
 import com.digitalmall.security.RequireRole;
+import com.digitalmall.service.AfterSaleService;
 import com.digitalmall.service.MerchantService;
+import com.digitalmall.vo.AfterSaleItemVO;
 import com.digitalmall.vo.MerchantApplyStatusVO;
 import com.digitalmall.vo.MerchantOrderVO;
 import com.digitalmall.vo.MerchantProductVO;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class MerchantController {
 
     private final MerchantService merchantService;
+    private final AfterSaleService afterSaleService;
 
     /** 提交入驻申请（普通用户） */
     @PostMapping("/apply")
@@ -110,5 +113,14 @@ public class MerchantController {
     @RequireRole(RequireRole.MERCHANT)
     public Result<MerchantStatsVO> stats() {
         return Result.success(merchantService.stats());
+    }
+
+    /** 本店售后列表（售后处理页签） */
+    @GetMapping("/after-sale/page")
+    @RequireRole(RequireRole.MERCHANT)
+    public Result<PageResult<AfterSaleItemVO>> afterSalePage(@RequestParam(required = false) Integer status,
+                                                             @RequestParam(defaultValue = "1") long pageNum,
+                                                             @RequestParam(defaultValue = "10") long pageSize) {
+        return Result.success(afterSaleService.merchantPage(status, pageNum, pageSize));
     }
 }

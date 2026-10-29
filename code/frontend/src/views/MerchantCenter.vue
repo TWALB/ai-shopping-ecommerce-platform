@@ -169,6 +169,63 @@
           </el-card>
           <el-empty v-else description="暂无销售数据" style="margin-top: 24px" />
         </div>
+
+        <!-- 售后处理 -->
+        <div v-show="activeTab === 'aftersales'">
+          <div class="tool-row">
+            <el-radio-group v-model="asStatus" @change="loadAfterSales">
+              <el-radio-button :value="''">全部</el-radio-button>
+              <el-radio-button :value="0">待处理</el-radio-button>
+              <el-radio-button :value="1">商家同意</el-radio-button>
+              <el-radio-button :value="2">商家拒绝</el-radio-button>
+              <el-radio-button :value="3">平台介入</el-radio-button>
+              <el-radio-button :value="4">已完成</el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <el-table :data="afterSales" v-loading="asLoading" stripe>
+            <el-table-column prop="afterSaleNo" label="售后单号" width="180" />
+            <el-table-column label="商品" min-width="180">
+              <template #default="{ row }">
+                <div class="prod-cell">
+                  <el-image :src="row.productImage || placeholder" fit="cover" class="prod-img" />
+                  <div>
+                    <div>{{ row.productName }}</div>
+                    <div class="empty-text">{{ row.skuName }} ×{{ row.quantity }}</div>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="90">
+              <template #default="{ row }">{{ asTypeText(row.type) }}</template>
+            </el-table-column>
+            <el-table-column label="退款金额" width="100">
+              <template #default="{ row }">¥{{ row.amount }}</template>
+            </el-table-column>
+            <el-table-column prop="reason" label="申请原因" min-width="160" show-overflow-tooltip />
+            <el-table-column label="状态" width="110">
+              <template #default="{ row }">
+                <el-tag :type="asStatusTag(row.status)">{{ asStatusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="申请时间" width="160">
+              <template #default="{ row }">{{ row.createdTime?.replace('T', ' ') }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="150" fixed="right">
+              <template #default="{ row }">
+                <template v-if="row.status === 0">
+                  <el-button size="small" type="success" @click="agreeAfterSale(row)">同意退款</el-button>
+                  <el-button size="small" type="danger" @click="openReject(row)">拒绝</el-button>
+                </template>
+                <span v-else class="empty-text">—</span>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <el-pagination v-if="asTotal > 0" class="pager" background layout="prev, pager, next, total"
+                         :total="asTotal" :page-size="asPageSize" v-model:current-page="asPageNum"
+                         @current-change="loadAfterSales" />
+        </div>
     </el-card>
 
     <!-- 商品发布/编辑弹窗 -->
@@ -276,6 +333,21 @@
       </template>
     </el-dialog>
 
+    <!-- 售后拒绝弹窗 -->
+    <el-dialog v-model="rejectDialog" title="拒绝售后" width="460px">
+      <el-form label-width="90px">
+        <el-form-item label="售后单号">{{ rejectRow?.afterSaleNo }}</el-form-item>
+        <el-form-item label="拒绝原因" required>
+          <el-input v-model="rejectReason" type="textarea" :rows="3" maxlength="200" show-word-limit
+                    placeholder="请说明拒绝原因，用户可申请平台介入" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialog = false">取消</el-button>
+        <el-button type="danger" :loading="rejecting" @click="doReject">确认拒绝</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 发货弹窗 -->
     <el-dialog v-model="deliverDialog" title="订单发货" width="460px">
       <el-form :model="deliverForm" label-width="90px">
@@ -303,6 +375,7 @@ import {
   updateProductStatus, getMerchantOrderPage, deliverOrder, getMerchantStats
 } from '../api/merchant'
 import { getCategoryTree, getBrandList, getProductDetail } from '../api/product'
+import { getMerchantAfterSalePage, handleAfterSale } from '../api/afterSale'
 
 const route = useRoute()
 const placeholder = 'https://via.placeholder.com/80'
@@ -489,6 +562,69 @@ async function loadStats() {
   stats.value = await getMerchantStats()
 }
 
+// ===== 售后处理 =====
+const afterSales = ref([])
+const asTotal = ref(0)
+const asPageNum = ref(1)
+const asPageSize = 10
+const asStatus = ref('')
+const asLoading = ref(false)
+const rejectDialog = ref(false)
+const rejectReason = ref('')
+const rejectRow = ref(null)
+const rejecting = ref(false)
+const asStatusMap = { 0: '待商家处理', 1: '商家同意', 2: '商家拒绝', 3: '平台介入', 4: '已完成', 5: '已撤销' }
+const asTypeMap = { 0: '仅退款', 1: '退货退款', 2: '换货' }
+const asStatusText = (s) => asStatusMap[s] || '未知'
+const asTypeText = (t) => asTypeMap[t] || '售后'
+const asStatusTag = (s) => (s === 0 ? 'warning' : s === 1 ? 'success' : s === 2 ? 'danger'
+  : s === 3 ? 'primary' : s === 4 ? 'success' : 'info')
+
+async function loadAfterSales() {
+  asLoading.value = true
+  try {
+    const data = await getMerchantAfterSalePage({
+      pageNum: asPageNum.value,
+      pageSize: asPageSize,
+      status: asStatus.value === '' ? undefined : asStatus.value
+    })
+    afterSales.value = data.list || []
+    asTotal.value = data.total || 0
+  } catch (e) { /* 忽略 */ } finally {
+    asLoading.value = false
+  }
+}
+
+async function agreeAfterSale(row) {
+  await ElMessageBox.confirm(
+    `同意后将退款 ¥${row.amount} 给买家并完成售后，确认？`, '处理确认', { type: 'warning' })
+  await handleAfterSale(row.id, { agree: true })
+  ElMessage.success('已同意，退款已原路退回')
+  loadAfterSales()
+}
+
+function openReject(row) {
+  rejectRow.value = row
+  rejectReason.value = ''
+  rejectDialog.value = true
+}
+
+async function doReject() {
+  if (!rejectReason.value.trim()) {
+    ElMessage.warning('请填写拒绝原因')
+    return
+  }
+  rejecting.value = true
+  try {
+    await handleAfterSale(rejectRow.value.id, { agree: false, rejectReason: rejectReason.value.trim() })
+    ElMessage.success('已拒绝，买家可申请平台介入')
+    rejectDialog.value = false
+    loadAfterSales()
+  } catch (e) { /* 忽略 */ } finally {
+    rejecting.value = false
+  }
+}
+
 // ===== 初始化 =====
 async function loadMeta() {
   try {
@@ -504,7 +640,8 @@ function onTabChange(tab) {
     shop: loadShop,
     products: loadProducts,
     orders: loadOrders,
-    stats: loadStats
+    stats: loadStats,
+    aftersales: loadAfterSales
   }
   loaders[tab]?.()
 }
