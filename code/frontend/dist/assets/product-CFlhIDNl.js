@@ -1,1 +1,0 @@
-import{r as t}from"./request-Dgxi9-o8.js";const r=e=>t.get("/product/page",{params:e}),c=e=>t.get(`/product/${e}`),g=()=>t.get("/product/category/tree"),s=()=>t.get("/product/brand/list"),a=()=>t.get("/product/hot");export{g as a,s as b,r as c,c as d,a as g};

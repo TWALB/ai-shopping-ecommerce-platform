@@ -13,13 +13,16 @@ venv/
 Thumbs.db
 
 # Java / Maven
-backend/target/
+code/backend/target/
 *.class
 *.jar
 
 # Node / Vite
 node_modules/
-frontend/dist/
+code/frontend/dist/
+
+# 本地私密配置（含 API Key 等敏感信息，禁止提交）
+code/backend/src/main/resources/application-local.yml
 
 # IDE
 *.iml
