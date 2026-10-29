@@ -35,9 +35,10 @@
 ## 快速启动
 1. MySQL 执行 `数码电商平台-数据库建表SQL.sql`（把管理员密码替换为 BCrypt 密文）
 2. 启动 Redis
-3. 后端：`cd code/backend && mvn spring-boot:run`（8080）
-4. 前端：`cd code/frontend && npm install && npm run dev`（5173）
-5. 浏览器打开 http://localhost:5173
+3. 后端配置：`cd code/backend/src/main/resources && Copy-Item application-local.yml.example application-local.yml`，在生成的文件里填入自己的大模型 Key（不填也能启动，导购自动走本地检索降级模式）
+4. 后端启动：`cd code/backend && mvn spring-boot:run`（8080）
+5. 前端：`cd code/frontend && npm install && npm run dev`（5173）
+6. 浏览器打开 http://localhost:5173
 
 ## 开发路线
 数据库（完成）→ 接口文档（完成）→ 脚手架（完成）→
@@ -47,6 +48,23 @@
 
 - 链路：意图识别（find_product / compare / recommend / chat + 槽位）→ 商品召回（Top5）→ 组装 Prompt → 流式生成 → 落库
 - 接口：`POST /api/chat/send`（SSE，事件序列 `intent` → `products` → `answer`（delta 增量）→ `done`）；会话与历史：`/api/chat/session`、`/api/chat/session/page`、`/api/chat/message/page`
-- 双模式：`application.yml` 中 `llm.api-key` 为占位符时自动降级为「规则意图识别 + 本地结构化召回 + 模板分段推送」，无网络也能完整演示；填入真实 Key（豆包方舟或任意 OpenAI 兼容端点）后切换为「Embedding 向量召回 + LLM 流式生成」
-- 启用真实大模型：修改 `llm.api-key`、`llm.model`、`llm.embedding-model` 后重启后端，管理员在「管理端 → 商品管理 → 重建导购知识库」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
+- 双模式：未提供真实 Key（`application.yml` 中保持占位符、`application-local.yml` 未配置）时自动降级为「规则意图识别 + 本地结构化召回 + 模板分段推送」，无网络也能完整演示；填入真实 Key（豆包方舟或任意 OpenAI 兼容端点）后切换为「Embedding 向量召回 + LLM 流式生成」
+- 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → 商品管理 → 重建导购知识库」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
 - 召回策略：对比类问题优先精确匹配用户点名的机型/品牌；找商品类按「品类 → 预算上限 → 关键词同义词 → 品牌 → 销量微调」排序，超出预算 20% 以上直接剔除
+
+## 配置与密钥管理
+
+仓库会公开托管，密钥不进版本库，按以下约定维护：
+
+| 文件 | 是否提交 | 作用 |
+|---|---|---|
+| `code/backend/src/main/resources/application.yml` | 提交 | 只保留默认值与占位符，敏感项写成 `${环境变量:默认值}` |
+| `code/backend/src/main/resources/application-local.yml` | **不提交**（已被 `.gitignore` 忽略） | 本机真实配置：大模型 `base-url` / `api-key` / 模型名 |
+| `code/backend/src/main/resources/application-local.yml.example` | 提交 | 模板，新环境复制后填 Key |
+
+- 敏感项：`llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model` 统一用 `${LLM_BASE_URL:...}`、`${LLM_API_KEY:...}`、`${LLM_MODEL:...}`、`${LLM_EMBEDDING_MODEL:...}` 读取
+- 本地默认激活 `local` profile（`spring.profiles.active: ${SPRING_PROFILES_ACTIVE:local}`）；若没有 `application-local.yml`，启动不报错，导购自动降级为本地检索模式
+- 取值优先级：环境变量 > `application-local.yml` > `application.yml` 默认值
+- 构建产物 `code/backend/target`、`code/frontend/dist` 已从 Git 索引移除并加入忽略——否则 `target/classes/application.yml` 这类配置副本会把密钥带进仓库
+- 提交前自查：`git diff --cached | Select-String "sk-"`，有命中说明密钥已进暂存区，先 `git restore --staged <文件>` 再提交
+- 换 Key 只改 `application-local.yml`，不要改 `application.yml`；若 Key 曾进入过任何已推送的提交，应立即在模型平台控制台吊销并重新签发
