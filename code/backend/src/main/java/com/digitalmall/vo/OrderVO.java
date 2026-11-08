@@ -34,5 +34,8 @@ public class OrderVO {
     /** 首图 */
     private String firstImage;
 
+    /** 已提交评价条数（0 表示未评价） */
+    private Integer commented;
+
     private LocalDateTime createdTime;
 }

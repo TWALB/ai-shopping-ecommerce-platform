@@ -213,25 +213,27 @@
             </el-select>
           </div>
           <el-table :data="aftersales" v-loading="afterSaleLoading" stripe>
-            <el-table-column prop="afterSaleNo" label="售后单号" width="190" />
-            <el-table-column prop="username" label="申请人" width="110" />
-            <el-table-column prop="productName" label="商品" min-width="160" show-overflow-tooltip />
-            <el-table-column label="类型" width="100">
+            <el-table-column label="售后单" min-width="175">
+              <template #default="{ row }">
+                <div class="mono-text">{{ row.afterSaleNo }}</div>
+                <div class="empty-text">{{ row.createdTime?.replace('T', ' ') }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="username" label="申请人" width="100" show-overflow-tooltip />
+            <el-table-column prop="productName" label="商品" min-width="150" show-overflow-tooltip />
+            <el-table-column label="类型" width="90">
               <template #default="{ row }">{{ afterSaleTypeText(row.type) }}</template>
             </el-table-column>
-            <el-table-column prop="amount" label="金额" width="100">
+            <el-table-column prop="amount" label="金额" width="90">
               <template #default="{ row }">¥{{ row.amount }}</template>
             </el-table-column>
-            <el-table-column label="状态" width="110">
+            <el-table-column label="状态" width="100">
               <template #default="{ row }">
                 <el-tag :type="afterSaleStatusTag(row.status)">{{ afterSaleStatusText(row.status) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="reason" label="原因" min-width="140" show-overflow-tooltip />
-            <el-table-column label="申请时间" width="160">
-              <template #default="{ row }">{{ row.createdTime?.replace('T', ' ') }}</template>
-            </el-table-column>
-            <el-table-column label="操作" width="160" fixed="right">
+            <el-table-column prop="reason" label="原因" min-width="120" show-overflow-tooltip />
+            <el-table-column label="操作" width="150" fixed="right">
               <template #default="{ row }">
                 <el-button v-if="row.status === 2" size="small" type="warning" @click="platformIntervene(row, 3)">介入处理</el-button>
                 <el-button v-if="row.status === 3" size="small" type="success" @click="platformIntervene(row, 4)">完成退款</el-button>
@@ -802,4 +804,5 @@ onMounted(() => {
 .rate-cell { display: inline-block; margin-right: 8px; color: #475569; font-size: 13px; }
 .pager { margin-top: 16px; justify-content: flex-end; }
 .empty-text { color: #94a3b8; font-size: 13px; }
+.mono-text { font-family: Consolas, Menlo, monospace; font-size: 12px; }
 </style>

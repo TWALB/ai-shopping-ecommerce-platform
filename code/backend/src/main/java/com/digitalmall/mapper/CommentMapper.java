@@ -16,7 +16,8 @@ public interface CommentMapper extends BaseMapper<Comment> {
     /** 商品已展示评价分页（公开，仅 status=1） */
     @Select("SELECT c.id, c.product_score, c.logistics_score, c.content, c.image_urls, c.is_anonymous, " +
             "c.reply_content, c.reply_time, c.created_time, " +
-            "CASE WHEN c.is_anonymous = 1 THEN '匿名用户' ELSE IFNULL(u.nickname, '用户') END AS nickname " +
+            "CASE WHEN c.is_anonymous = 1 THEN '匿名用户' " +
+            "ELSE IFNULL(NULLIF(u.nickname, ''), IFNULL(NULLIF(u.username, ''), '用户')) END AS nickname " +
             "FROM `comment` c LEFT JOIN sys_user u ON c.user_id = u.id " +
             "WHERE c.product_id = #{productId} AND c.status = 1 " +
             "ORDER BY c.created_time DESC")
@@ -26,7 +27,8 @@ public interface CommentMapper extends BaseMapper<Comment> {
     @Select("<script>" +
             "SELECT c.id, c.product_score, c.logistics_score, c.content, c.is_anonymous, c.status, " +
             "c.reply_content, c.reply_time, c.created_time, p.product_name, s.shop_name, " +
-            "CASE WHEN c.is_anonymous = 1 THEN '匿名用户' ELSE IFNULL(u.nickname, '用户') END AS nickname " +
+            "CASE WHEN c.is_anonymous = 1 THEN '匿名用户' " +
+            "ELSE IFNULL(NULLIF(u.nickname, ''), IFNULL(NULLIF(u.username, ''), '用户')) END AS nickname " +
             "FROM `comment` c " +
             "JOIN product p ON c.product_id = p.id " +
             "JOIN shop s ON p.shop_id = s.id " +

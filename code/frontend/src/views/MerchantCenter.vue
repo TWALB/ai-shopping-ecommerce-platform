@@ -184,8 +184,13 @@
           </div>
 
           <el-table :data="afterSales" v-loading="asLoading" stripe>
-            <el-table-column prop="afterSaleNo" label="售后单号" width="180" />
-            <el-table-column label="商品" min-width="180">
+            <el-table-column label="售后单" min-width="165">
+              <template #default="{ row }">
+                <div class="mono-text">{{ row.afterSaleNo }}</div>
+                <div class="empty-text">{{ row.createdTime?.replace('T', ' ') }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="商品" min-width="150">
               <template #default="{ row }">
                 <div class="prod-cell">
                   <el-image :src="row.productImage || placeholder" fit="cover" class="prod-img" />
@@ -196,22 +201,19 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="类型" width="90">
+            <el-table-column label="类型" width="80">
               <template #default="{ row }">{{ asTypeText(row.type) }}</template>
             </el-table-column>
-            <el-table-column label="退款金额" width="100">
+            <el-table-column label="退款金额" width="90">
               <template #default="{ row }">¥{{ row.amount }}</template>
             </el-table-column>
-            <el-table-column prop="reason" label="申请原因" min-width="160" show-overflow-tooltip />
-            <el-table-column label="状态" width="110">
+            <el-table-column prop="reason" label="申请原因" min-width="110" show-overflow-tooltip />
+            <el-table-column label="状态" width="85">
               <template #default="{ row }">
                 <el-tag :type="asStatusTag(row.status)">{{ asStatusText(row.status) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="申请时间" width="160">
-              <template #default="{ row }">{{ row.createdTime?.replace('T', ' ') }}</template>
-            </el-table-column>
-            <el-table-column label="操作" width="150" fixed="right">
+            <el-table-column label="操作" width="135" fixed="right">
               <template #default="{ row }">
                 <template v-if="row.status === 0">
                   <el-button size="small" type="success" @click="agreeAfterSale(row)">同意退款</el-button>
@@ -668,6 +670,7 @@ onMounted(() => {
 .tool-row { display: flex; align-items: center; margin-bottom: 14px; }
 .tool-row .right { margin-left: auto; }
 .prod-cell { display: flex; align-items: center; gap: 10px; }
+.mono-text { font-family: Consolas, Menlo, monospace; font-size: 12px; }
 .prod-img { width: 52px; height: 52px; border-radius: 6px; }
 .order-cell { display: flex; align-items: center; gap: 10px; }
 .order-img { width: 52px; height: 52px; border-radius: 6px; }

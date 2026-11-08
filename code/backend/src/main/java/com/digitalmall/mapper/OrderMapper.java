@@ -16,7 +16,8 @@ public interface OrderMapper extends BaseMapper<Order> {
             "SELECT o.id, o.order_no, o.shop_id, s.shop_name, o.status, o.total_amount, o.freight_amount, " +
             "o.pay_amount, o.created_time, " +
             "(SELECT COUNT(*) FROM order_item oi WHERE oi.order_id = o.id) AS item_count, " +
-            "(SELECT MIN(oi2.product_image) FROM order_item oi2 WHERE oi2.order_id = o.id) AS first_image " +
+            "(SELECT MIN(oi2.product_image) FROM order_item oi2 WHERE oi2.order_id = o.id) AS first_image, " +
+            "(SELECT COUNT(*) FROM comment c WHERE c.order_id = o.id) AS commented " +
             "FROM `order` o JOIN shop s ON o.shop_id = s.id " +
             "WHERE o.user_id = #{userId} " +
             "<if test='status != null'> AND o.status = #{status} </if>" +

@@ -19,7 +19,7 @@ public interface AfterSaleMapper extends BaseMapper<AfterSale> {
     @Select("<script>" +
             "SELECT a.id, a.after_sale_no, a.order_id, a.type, a.reason, a.amount, a.status, " +
             "a.reject_reason, a.handle_time, a.created_time, " +
-            "IFNULL(u.nickname, u.username) AS username, " +
+            "IFNULL(NULLIF(u.nickname, ''), u.username) AS username, " +
             "IFNULL(oi.product_name, '订单商品') AS product_name " +
             "FROM after_sale a " +
             "LEFT JOIN sys_user u ON a.user_id = u.id " +
@@ -70,7 +70,7 @@ public interface AfterSaleMapper extends BaseMapper<AfterSale> {
     /** 售后单详情（含商品、订单、店铺、收货快照） */
     @Select("SELECT a.id, a.after_sale_no, a.order_id, o.order_no, a.order_item_id, a.type, a.reason, a.amount, " +
             "a.status, a.reject_reason, a.created_time, a.handle_time, a.user_id, " +
-            "IFNULL(u.nickname, u.username) AS username, " +
+            "IFNULL(NULLIF(u.nickname, ''), u.username) AS username, " +
             "oi.product_name, oi.product_image, oi.sku_name, oi.quantity, " +
             "o.status AS order_status, o.pay_amount AS order_pay_amount, " +
             "o.receiver_name, o.receiver_phone, o.receiver_address, s.shop_name " +
