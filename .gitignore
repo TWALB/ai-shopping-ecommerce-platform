@@ -29,3 +29,10 @@ code/backend/src/main/resources/application-local.yml
 .idea/
 .vscode/
 
+# 本地运行日志（启动 / 构建时重定向产生，不入库）
+verify-backend*.log
+tmp-vite*.log
+build-check.log
+tmp-*.log
+tmp-sql*.txt
+

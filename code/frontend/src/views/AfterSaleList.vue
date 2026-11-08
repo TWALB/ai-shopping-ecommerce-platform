@@ -14,8 +14,13 @@
       </template>
 
       <el-table :data="list" v-loading="loading" stripe>
-        <el-table-column prop="afterSaleNo" label="售后单号" width="190" />
-        <el-table-column label="商品" min-width="200">
+        <el-table-column label="售后单" min-width="160">
+          <template #default="{ row }">
+            <div class="mono-no">{{ row.afterSaleNo }}</div>
+            <div class="prod-sku">{{ row.createdTime?.replace('T', ' ') }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="商品" min-width="120">
           <template #default="{ row }">
             <div class="prod">
               <el-image :src="row.productImage || placeholder" fit="cover" class="prod-img" />
@@ -26,25 +31,23 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="100">
-          <template #default="{ row }">{{ typeText(row.type) }}</template>
+        <el-table-column label="类型" width="85">
+          <template #default="{ row }">
+            <div>{{ typeText(row.type) }}</div>
+            <div class="prod-sku">¥{{ row.amount }}</div>
+          </template>
         </el-table-column>
-        <el-table-column label="退款金额" width="110">
-          <template #default="{ row }">¥{{ row.amount }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
+        <el-table-column label="状态" width="95">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" label="申请原因" min-width="180" show-overflow-tooltip />
-        <el-table-column label="申请时间" width="170">
-          <template #default="{ row }">{{ row.createdTime?.replace('T', ' ') }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column prop="reason" label="原因" min-width="90" show-overflow-tooltip />
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button size="small" link type="primary" @click="openDetail(row.id)">详情</el-button>
             <el-button v-if="row.status === 0" size="small" link type="danger" @click="cancel(row)">撤销</el-button>
+            <el-button v-if="row.status === 2" size="small" link type="warning" @click="appeal(row)">申请介入</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -86,7 +89,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMyAfterSalePage, getAfterSaleDetail, cancelAfterSale } from '../api/afterSale'
+import { getMyAfterSalePage, getAfterSaleDetail, cancelAfterSale, appealAfterSale } from '../api/afterSale'
 
 const placeholder = 'https://via.placeholder.com/60'
 const list = ref([])
@@ -137,6 +140,13 @@ async function cancel(row) {
   load()
 }
 
+async function appeal(row) {
+  await ElMessageBox.confirm(`商家已拒绝该售后单，确定申请平台介入处理吗？`, '申请平台介入', { type: 'warning' })
+  await appealAfterSale(row.id)
+  ElMessage.success('已申请平台介入，请等待管理员处理')
+  load()
+}
+
 onMounted(load)
 </script>
 
@@ -148,6 +158,7 @@ onMounted(load)
 .prod-img { width: 44px; height: 44px; border-radius: 6px; flex: none; }
 .prod-name { font-size: 13px; color: #334155; }
 .prod-sku { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.mono-no { font-family: Consolas, Menlo, monospace; font-size: 12px; color: #334155; white-space: nowrap; }
 .pager { margin-top: 16px; justify-content: flex-end; display: flex; }
 .progress-title { font-weight: 700; margin: 22px 0 12px; color: #334155; }
 .p-desc { color: #64748b; font-size: 13px; margin-top: 2px; }

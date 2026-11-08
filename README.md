@@ -61,12 +61,13 @@
 
 ## 售后模块说明（⑦）
 
-- 状态机：`0` 待商家处理 →（商家同意）`4` 已完成；→（商家拒绝）`2` 商家拒绝 →（平台介入）`3` 平台介入 → `4` 已完成；用户在 `0` 状态可撤销 → `5` 已撤销
+- 状态机：`0` 待商家处理 →（商家同意）`4` 已完成；→（商家拒绝）`2` 商家拒绝 →（用户申请介入）`3` 平台介入 →（平台判定）`4` 已完成；用户在 `0` 状态可撤销 → `5` 已撤销
 - 申请规则：仅「待收货 / 已完成」订单可申请；同一明细存在进行中售后单时返回 409；申请后订单 `status→5`（售后中），撤销 / 拒绝 / 完成后按 `finishTime` 自动回退为 `2` 或 `3`
 - 退款：商家同意或平台判定完成时 `payment.status→2`（已退款），并补齐订单 `finishTime`；换货（type=2）金额固定 0，退款金额不得超过该明细实付
-- 接口：`POST /api/after-sale`、`GET /api/after-sale/page`、`GET /api/after-sale/{id}`（返回 3 节点处理进度）、`POST /api/after-sale/{id}/cancel`、`PUT /api/after-sale/{id}/handle`（商家）、`PUT /api/after-sale/{id}/admin`（平台 3 介入 / 4 完成）、`GET /merchant/after-sale/page`（商家列表）、`GET /admin/after-sale/page`
+- 平台介入：商家拒绝后买家可在「我的售后」发起 `POST /api/after-sale/{id}/appeal`（仅本人、仅 `status=2` 可申请，否则 400/403）；管理员判定完成时可填写平台意见，后端以「拒绝原因｜平台意见：xxx」追加到 `reject_reason`，详情页同时展示商家拒绝理由与平台意见
+- 接口：`POST /api/after-sale`、`GET /api/after-sale/page`、`GET /api/after-sale/{id}`（返回 3 节点处理进度）、`POST /api/after-sale/{id}/cancel`、`POST /api/after-sale/{id}/appeal`（买家申请平台介入）、`PUT /api/after-sale/{id}/handle`（商家）、`PUT /api/after-sale/{id}/admin`（平台 3 介入 / 4 完成）、`GET /merchant/after-sale/page`（商家列表）、`GET /admin/after-sale/page`
 - 权限：详情仅本人 / 本店商家 / 管理员可见；商家处理与商家列表按店铺过滤，跨店返回 403
-- 前端：订单详情「申请售后」弹窗 +「售后记录」卡片、`/after-sales` 我的售后（进度时间轴、撤销）、商家端「售后处理」页签、管理端「售后管理」页签（平台介入 / 完成退款）
+- 前端：订单详情「申请售后」弹窗 +「售后记录」卡片、`/after-sales` 我的售后（进度时间轴、撤销 / 申请介入）、商家端「售后处理」页签（同意 / 拒绝并填写拒绝原因）、管理端「售后管理」页签（介入处理 / 完成退款并填写平台意见）
 
 ## 认证与会话安全
 
@@ -77,6 +78,7 @@
 - 忘记密码：`POST /api/auth/sms-code` 生成 6 位验证码写入 Redis（5 分钟有效，同手机号 + 同场景 60 秒限一次）；`POST /api/auth/forgot` 校验并消费验证码后重置密码（登录页「忘记密码？」入口）
 - 验证码在开发环境只打印后端日志（搜索「模拟短信」），生产环境须接入短信网关，不得写入日志或响应体
 - Redis 是登录态的一部分：Redis 不可用时登录与鉴权返回 503「登录状态校验失败」，需先启动 Redis
+- 本机 Redis 在 WSL 内（Windows 侧无原生 Redis），启动方式：`Start-Process wsl.exe -ArgumentList @('-d','Ubuntu','-u','root','--','bash','-lc','redis-server --daemonize yes; sleep 86400') -WindowStyle Hidden`，约 5 秒后 `netstat -ano | Select-String ':6379' | Select-String LISTENING` 有输出即为就绪
 
 ## 配置与密钥管理
 

@@ -184,13 +184,13 @@
           </div>
 
           <el-table :data="afterSales" v-loading="asLoading" stripe>
-            <el-table-column label="售后单" min-width="165">
+            <el-table-column label="售后单" min-width="160">
               <template #default="{ row }">
                 <div class="mono-text">{{ row.afterSaleNo }}</div>
                 <div class="empty-text">{{ row.createdTime?.replace('T', ' ') }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="商品" min-width="150">
+            <el-table-column label="商品" min-width="140">
               <template #default="{ row }">
                 <div class="prod-cell">
                   <el-image :src="row.productImage || placeholder" fit="cover" class="prod-img" />
@@ -201,22 +201,22 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="类型" width="80">
-              <template #default="{ row }">{{ asTypeText(row.type) }}</template>
-            </el-table-column>
-            <el-table-column label="退款金额" width="90">
-              <template #default="{ row }">¥{{ row.amount }}</template>
-            </el-table-column>
-            <el-table-column prop="reason" label="申请原因" min-width="110" show-overflow-tooltip />
-            <el-table-column label="状态" width="85">
+            <el-table-column label="类型" width="85">
               <template #default="{ row }">
-                <el-tag :type="asStatusTag(row.status)">{{ asStatusText(row.status) }}</el-tag>
+                <div>{{ asTypeText(row.type) }}</div>
+                <div class="empty-text">¥{{ row.amount }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="135" fixed="right">
+            <el-table-column prop="reason" label="原因" min-width="70" show-overflow-tooltip />
+            <el-table-column label="状态" width="105">
+              <template #default="{ row }">
+                <el-tag :type="asStatusTag(row.status)" size="small">{{ asStatusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="110" fixed="right">
               <template #default="{ row }">
                 <template v-if="row.status === 0">
-                  <el-button size="small" type="success" @click="agreeAfterSale(row)">同意退款</el-button>
+                  <el-button size="small" type="success" @click="agreeAfterSale(row)">同意</el-button>
                   <el-button size="small" type="danger" @click="openReject(row)">拒绝</el-button>
                 </template>
                 <span v-else class="empty-text">—</span>
@@ -670,8 +670,8 @@ onMounted(() => {
 .tool-row { display: flex; align-items: center; margin-bottom: 14px; }
 .tool-row .right { margin-left: auto; }
 .prod-cell { display: flex; align-items: center; gap: 10px; }
-.mono-text { font-family: Consolas, Menlo, monospace; font-size: 12px; }
-.prod-img { width: 52px; height: 52px; border-radius: 6px; }
+.mono-text { font-family: Consolas, Menlo, monospace; font-size: 12px; white-space: nowrap; }
+.prod-img { width: 36px; height: 36px; border-radius: 6px; }
 .order-cell { display: flex; align-items: center; gap: 10px; }
 .order-img { width: 52px; height: 52px; border-radius: 6px; }
 .order-no { font-weight: 600; }

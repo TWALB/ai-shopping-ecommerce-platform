@@ -22,6 +22,9 @@ public interface AfterSaleService {
     /** 撤销售后（仅待商家处理） */
     void cancel(Long id);
 
+    /** 申请平台介入（仅商家拒绝状态，用户主动申诉） */
+    void appeal(Long id);
+
     /** 商家端：本店售后列表 */
     PageResult<AfterSaleItemVO> merchantPage(Integer status, long pageNum, long pageSize);
 

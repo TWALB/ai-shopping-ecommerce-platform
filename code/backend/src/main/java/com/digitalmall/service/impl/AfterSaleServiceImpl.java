@@ -146,6 +146,24 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         restoreOrder(as.getOrderId());
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void appeal(Long id) {
+        AfterSale as = afterSaleMapper.selectById(id);
+        if (as == null) {
+            throw new BusinessException(404, "售后单不存在");
+        }
+        if (!as.getUserId().equals(uid())) {
+            throw new BusinessException(403, "无权操作该售后单");
+        }
+        if (as.getStatus() != 2) {
+            throw new BusinessException(400, "仅商家拒绝的售后单可申请平台介入");
+        }
+        as.setStatus(3);
+        afterSaleMapper.updateById(as);
+        log("售后申请", "申请平台介入 售后单" + as.getAfterSaleNo());
+    }
+
     // ==================== 商家端 ====================
 
     @Override
@@ -273,20 +291,30 @@ public class AfterSaleServiceImpl implements AfterSaleService {
                 format(vo.getCreatedTime()), true));
 
         boolean handled = vo.getStatus() != null && vo.getStatus() != 0;
+        boolean platformOpinion = vo.getRejectReason() != null && vo.getRejectReason().contains("平台意见");
+        String merchantReason = merchantPart(vo.getRejectReason());
         String desc;
         switch (vo.getStatus() == null ? -1 : vo.getStatus()) {
             case 0 -> desc = "等待商家处理";
             case 1 -> desc = "商家已同意，等待退款";
-            case 2 -> desc = "商家拒绝：" + (vo.getRejectReason() == null ? "未填写原因" : vo.getRejectReason());
-            case 3 -> desc = "平台介入处理中";
-            case 4 -> desc = "售后已完成，退款已原路退回";
+            case 2 -> desc = "商家拒绝：" + (merchantReason.isBlank() ? "未填写原因" : merchantReason);
+            case 3 -> desc = "商家拒绝：" + (merchantReason.isBlank() ? "未填写原因" : merchantReason)
+                    + "；用户已申请平台介入";
+            case 4 -> desc = platformOpinion
+                    ? "商家拒绝：" + merchantReason + "；平台介入后判定支持退款"
+                    : "售后已完成，退款已原路退回";
             case 5 -> desc = "用户已撤销申请";
             default -> desc = "—";
         }
         list.add(node("商家处理", desc, format(vo.getHandleTime()), handled));
 
         boolean finished = vo.getStatus() != null && (vo.getStatus() == 4 || vo.getStatus() == 5);
-        list.add(node(finished ? "售后结束" : "结果", finished ? desc : "处理中…",
+        String resultDesc = switch (vo.getStatus() == null ? -1 : vo.getStatus()) {
+            case 4 -> platformOpinion ? "平台判定支持退款，退款已原路退回" : "售后已完成，退款已原路退回";
+            case 5 -> "用户已撤销申请，售后关闭";
+            default -> "处理中…";
+        };
+        list.add(node(finished ? "售后结束" : "结果", resultDesc,
                 finished ? format(vo.getHandleTime()) : "", finished));
         return list;
     }
@@ -298,6 +326,14 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         n.setTime(time);
         n.setActive(active);
         return n;
+    }
+
+    /** 从 reject_reason 中取商家拒绝部分（平台意见以｜分隔追加在后） */
+    private String merchantPart(String reason) {
+        if (reason == null) return "";
+        int idx = reason.indexOf("｜平台意见");
+        String part = idx > 0 ? reason.substring(0, idx) : reason;
+        return part.trim();
     }
 
     private String typeText(Integer type) {

@@ -56,6 +56,14 @@ public class AfterSaleController {
         return Result.success();
     }
 
+    /** 申请平台介入（商家拒绝后，用户主动申诉） */
+    @PostMapping("/{id}/appeal")
+    @RequireRole
+    public Result<Void> appeal(@PathVariable Long id) {
+        afterSaleService.appeal(id);
+        return Result.success();
+    }
+
     /** 商家处理售后（同意即完成退款；拒绝需填原因） */
     @PutMapping("/{id}/handle")
     @RequireRole(RequireRole.MERCHANT)

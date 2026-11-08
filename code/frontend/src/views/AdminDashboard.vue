@@ -213,27 +213,27 @@
             </el-select>
           </div>
           <el-table :data="aftersales" v-loading="afterSaleLoading" stripe>
-            <el-table-column label="售后单" min-width="175">
+            <el-table-column label="售后单" min-width="145">
               <template #default="{ row }">
                 <div class="mono-text">{{ row.afterSaleNo }}</div>
                 <div class="empty-text">{{ row.createdTime?.replace('T', ' ') }}</div>
               </template>
             </el-table-column>
-            <el-table-column prop="username" label="申请人" width="100" show-overflow-tooltip />
-            <el-table-column prop="productName" label="商品" min-width="150" show-overflow-tooltip />
-            <el-table-column label="类型" width="90">
-              <template #default="{ row }">{{ afterSaleTypeText(row.type) }}</template>
-            </el-table-column>
-            <el-table-column prop="amount" label="金额" width="90">
-              <template #default="{ row }">¥{{ row.amount }}</template>
-            </el-table-column>
-            <el-table-column label="状态" width="100">
+            <el-table-column prop="username" label="申请人" width="75" show-overflow-tooltip />
+            <el-table-column prop="productName" label="商品" min-width="90" show-overflow-tooltip />
+            <el-table-column label="类型" width="85">
               <template #default="{ row }">
-                <el-tag :type="afterSaleStatusTag(row.status)">{{ afterSaleStatusText(row.status) }}</el-tag>
+                <div>{{ afterSaleTypeText(row.type) }}</div>
+                <div class="empty-text">¥{{ row.amount }}</div>
               </template>
             </el-table-column>
-            <el-table-column prop="reason" label="原因" min-width="120" show-overflow-tooltip />
-            <el-table-column label="操作" width="150" fixed="right">
+            <el-table-column label="状态" width="92">
+              <template #default="{ row }">
+                <el-tag :type="afterSaleStatusTag(row.status)" size="small">{{ afterSaleStatusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="reason" label="原因" min-width="60" show-overflow-tooltip />
+            <el-table-column label="操作" width="105" fixed="right">
               <template #default="{ row }">
                 <el-button v-if="row.status === 2" size="small" type="warning" @click="platformIntervene(row, 3)">介入处理</el-button>
                 <el-button v-if="row.status === 3" size="small" type="success" @click="platformIntervene(row, 4)">完成退款</el-button>
@@ -640,13 +640,27 @@ function searchAfterSales() {
 
 /** 平台介入（3）或平台判定完成退款（4） */
 async function platformIntervene(row, targetStatus) {
-  const tip = targetStatus === 3
-    ? `确认受理售后单「${row.afterSaleNo}」的平台介入？`
-    : `确认判定「${row.afterSaleNo}」退款完成，并退款 ¥${row.amount}？`
-  await ElMessageBox.confirm(tip, '平台处理', { type: 'warning' })
-  await adminHandleAfterSale(row.id, { status: targetStatus, remark: '平台处理' })
-  ElMessage.success(targetStatus === 3 ? '已进入平台介入' : '已判定完成并退款')
-  loadAfterSales()
+  try {
+    if (targetStatus === 3) {
+      await ElMessageBox.confirm(`确认受理售后单「${row.afterSaleNo}」的平台介入？`, '平台处理', { type: 'warning' })
+      await adminHandleAfterSale(row.id, { status: 3 })
+      ElMessage.success('已进入平台介入')
+    } else {
+      const { value } = await ElMessageBox.prompt(
+        `确认为「${row.afterSaleNo}」判定退款完成并退款 ¥${row.amount}，请填写平台处理意见（选填）`,
+        '平台处理',
+        {
+          type: 'warning',
+          inputPlaceholder: '如：商家拒绝理由不成立，按平台规则支持退款',
+          confirmButtonText: '确定',
+          cancelButtonText: '取消'
+        }
+      )
+      await adminHandleAfterSale(row.id, { status: 4, remark: (value || '').trim() || '平台判定支持退款' })
+      ElMessage.success('已判定完成并退款')
+    }
+    loadAfterSales()
+  } catch (e) { /* 用户取消 */ }
 }
 
 // ===== 公告管理 =====
