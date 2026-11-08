@@ -19,6 +19,7 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item command="password">修改密码</el-dropdown-item>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -28,17 +29,42 @@
     <el-main class="main">
       <router-view />
     </el-main>
+
+    <!-- 修改密码 -->
+    <el-dialog v-model="pwdDialog" title="修改密码" width="420px">
+      <el-form label-width="96px">
+        <el-form-item label="原密码" required>
+          <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="当前登录密码" />
+        </el-form-item>
+        <el-form-item label="新密码" required>
+          <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="6-20 位" />
+        </el-form-item>
+        <el-form-item label="确认新密码" required>
+          <el-input v-model="pwdForm.confirm" type="password" show-password placeholder="再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <div class="pwd-tip">修改成功后当前登录会失效，需要重新登录。</div>
+      <template #footer>
+        <el-button @click="pwdDialog = false">取消</el-button>
+        <el-button type="primary" :loading="pwdLoading" @click="submitPassword">确认修改</el-button>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
-import { getMe } from '../api/auth'
+import { getMe, logout as logoutApi, changePassword } from '../api/auth'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const pwdDialog = ref(false)
+const pwdLoading = ref(false)
+const pwdForm = ref({ oldPassword: '', newPassword: '', confirm: '' })
 
 onMounted(async () => {
   try {
@@ -47,10 +73,33 @@ onMounted(async () => {
   } catch (e) { /* 未登录已由守卫处理 */ }
 })
 
-function handleCommand(command) {
+async function handleCommand(command) {
   if (command === 'logout') {
+    try { await logoutApi() } catch (e) { /* 后端不可用时也允许本地退出 */ }
     userStore.logout()
     router.push('/login')
+  } else if (command === 'password') {
+    pwdForm.value = { oldPassword: '', newPassword: '', confirm: '' }
+    pwdDialog.value = true
+  }
+}
+
+async function submitPassword() {
+  const f = pwdForm.value
+  if (!f.oldPassword) { ElMessage.warning('请输入原密码'); return }
+  if (!f.newPassword || f.newPassword.length < 6 || f.newPassword.length > 20) {
+    ElMessage.warning('新密码长度需为 6-20 位'); return
+  }
+  if (f.newPassword !== f.confirm) { ElMessage.warning('两次输入的新密码不一致'); return }
+  pwdLoading.value = true
+  try {
+    await changePassword(f.oldPassword, f.newPassword)
+    ElMessage.success('密码已修改，请重新登录')
+    pwdDialog.value = false
+    userStore.logout()
+    router.push('/login')
+  } catch (e) { /* 错误已统一提示 */ } finally {
+    pwdLoading.value = false
   }
 }
 </script>
@@ -63,4 +112,5 @@ function handleCommand(command) {
 .user-area { margin-left: auto; }
 .user-name { cursor: pointer; color: #374151; display: flex; align-items: center; gap: 4px; }
 .main { background: #f5f7fa; }
+.pwd-tip { font-size: 12px; color: #909399; padding-left: 12px; }
 </style>

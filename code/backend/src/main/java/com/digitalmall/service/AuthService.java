@@ -18,4 +18,16 @@ public interface AuthService {
 
     /** 当前登录用户 */
     SysUser getCurrentUser();
+
+    /** 登出：删除 Redis 中的登录态，使当前 Token 立即失效 */
+    void logout();
+
+    /** 修改密码：校验原密码，成功后强制重新登录 */
+    void changePassword(String oldPassword, String newPassword);
+
+    /** 忘记密码：手机号 + 验证码重置，成功后强制重新登录 */
+    void forgotPassword(String phone, String code, String newPassword);
+
+    /** 发送短信验证码（Redis 5 分钟，开发环境打印日志模拟发送） */
+    void sendSmsCode(String phone, String type);
 }

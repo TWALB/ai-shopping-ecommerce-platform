@@ -48,4 +48,9 @@ public class JwtUtil {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
+    /** Token 有效期（小时），供 Redis 中的登录态设置同样的 TTL */
+    public long getExpireHours() {
+        return expireHours;
+    }
 }

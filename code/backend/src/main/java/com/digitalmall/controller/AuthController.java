@@ -33,11 +33,11 @@ public class AuthController {
         return Result.success(authService.login(request));
     }
 
-    /** 登出（开发阶段：清理 Redis Token 记录） */
+    /** 登出（删除 Redis 中的登录态，当前 Token 立即失效） */
     @PostMapping("/logout")
     @RequireRole
     public Result<Void> logout() {
-        // TODO 开发阶段实现：删除 Redis key login:token:{userId}
+        authService.logout();
         return Result.success();
     }
 
@@ -48,11 +48,11 @@ public class AuthController {
         return Result.success(authService.getCurrentUser());
     }
 
-    /** 修改密码 */
+    /** 修改密码（校验原密码；成功后强制重新登录） */
     @PutMapping("/password")
     @RequireRole
     public Result<Void> changePassword(@RequestParam String oldPassword, @RequestParam String newPassword) {
-        // TODO 开发阶段实现：校验原密码后更新
+        authService.changePassword(oldPassword, newPassword);
         return Result.success();
     }
 
@@ -60,14 +60,14 @@ public class AuthController {
     @PostMapping("/forgot")
     public Result<Void> forgot(@RequestParam String phone, @RequestParam String code,
                                @RequestParam String newPassword) {
-        // TODO 开发阶段实现：Redis 校验验证码后重置密码
+        authService.forgotPassword(phone, code, newPassword);
         return Result.success();
     }
 
-    /** 发送短信验证码（Redis TTL 5分钟） */
+    /** 发送短信验证码（Redis TTL 5 分钟，开发环境打印日志模拟发送） */
     @PostMapping("/sms-code")
     public Result<Void> smsCode(@RequestParam String phone, @RequestParam String type) {
-        // TODO 开发阶段实现：生成验证码存入 Redis，模拟发送（打印日志）
+        authService.sendSmsCode(phone, type);
         return Result.success();
     }
 }

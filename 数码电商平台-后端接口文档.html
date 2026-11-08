@@ -134,7 +134,7 @@
 
       <details class="api" data-path="/auth/logout" data-desc="登出">
         <summary><span class="m post">POST</span><code class="p">/auth/logout</code><span class="tag user">用户</span><span class="d">登出并失效 Token</span></summary>
-        <div class="body"><div class="note">请求头携带 Token；后端删除 Redis 中的令牌记录。返回 code 200 即可。</div></div>
+        <div class="body"><div class="note">请求头携带 Token；后端删除 Redis 中的令牌记录。返回 code 200 即可。删除后该 Token 立即失效（再次访问返回 401「登录已失效，请重新登录」）。同一账号仅保留最新一次登录的 Token（单端登录）。</div></div>
       </details>
 
       <details class="api" data-path="/auth/me" data-desc="当前用户信息">

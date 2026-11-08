@@ -33,7 +33,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { getMe } from '../api/auth'
+import { getMe, logout as logoutApi } from '../api/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,7 +50,8 @@ onMounted(async () => {
   } catch (e) { /* 未登录已由守卫处理 */ }
 })
 
-function logout() {
+async function logout() {
+  try { await logoutApi() } catch (e) { /* 后端不可用时也允许本地退出 */ }
   userStore.logout()
   router.push('/login')
 }
