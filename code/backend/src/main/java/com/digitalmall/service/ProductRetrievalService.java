@@ -33,6 +33,8 @@ public class ProductRetrievalService {
 
     private static final String EMBED_KEY_PREFIX = "product:embedding:";
     private static final int TOP_N = 5;
+    /** 预算上浮容忍：留 20% 余量（与评测口径一致），超过即视为不满足约束 */
+    private static final double BUDGET_TOLERANCE = 1.2;
 
     /** 关键词同义词组，提升"拍照/续航"等需求的命中率 */
     private static final Map<String, List<String>> SYNONYMS = Map.of(
@@ -219,17 +221,34 @@ public class ProductRetrievalService {
 
     // ==================== 向量检索 ====================
 
+    /**
+     * 向量召回：先按结构化槽位做「硬约束过滤」，再按余弦相似度排序取 TopN。
+     *
+     * 为什么必须先过滤：余弦相似度只衡量语义接近程度，它不认识「预算 1000」「只要耳机」
+     * 这类硬约束。若直接取全局 TopN，会出现 1000 元预算推 2499 元商品、问耳机返回笔记本
+     * 的情况（实测预算越界率接近 100%）。过滤后若为空，视为「没有符合条件的商品」，
+     * 交由上层如实告知，而不是凑满 5 条。
+     */
     private List<ProductBriefVO> vectorRetrieve(List<Product> products, Map<String, Object> slots) {
         float[] queryVec = llmClient.embed(buildQuery(slots));
         if (queryVec == null) {
             return Collections.emptyList();
         }
-        Map<Long, Product> byId = products.stream().collect(Collectors.toMap(Product::getId, p -> p));
-        List<double[]> scored = new ArrayList<>();
         Set<String> keys = redisTemplate.keys(EMBED_KEY_PREFIX + "*");
         if (keys == null || keys.isEmpty()) {
             return Collections.emptyList();
         }
+        String category = str(slots, "category");
+        String brand = str(slots, "brand");
+        double budget = slots != null && slots.get("budget") instanceof Number n ? n.doubleValue() : 0;
+        Map<Long, String> categoryNames = categoryNameMap();
+        Map<Long, String> brandNames = brandNameMap();
+        // 品牌只有在知识库里确实存在时才作为硬约束，避免把「想要苹果」这类词误伤成空结果
+        boolean brandKnown = !brand.isEmpty() && products.stream()
+                .anyMatch(p -> brandNames.getOrDefault(p.getBrandId(), "").contains(brand));
+
+        Map<Long, Product> byId = products.stream().collect(Collectors.toMap(Product::getId, p -> p));
+        List<double[]> scored = new ArrayList<>();
         for (String key : keys) {
             try {
                 Long pid = Long.valueOf(key.substring(EMBED_KEY_PREFIX.length()));
@@ -237,13 +256,18 @@ public class ProductRetrievalService {
                 if (p == null) {
                     continue;
                 }
+                // 硬约束前置：不满足品类/预算/品牌的候选不进入排序
+                if (!matchCategory(p, category, categoryNames)
+                        || !matchBudget(p, budget)
+                        || (brandKnown && !brandNames.getOrDefault(p.getBrandId(), "").contains(brand))) {
+                    continue;
+                }
                 String raw = redisTemplate.opsForValue().get(key);
                 if (raw == null) {
                     continue;
                 }
                 float[] vec = objectMapper.readValue(raw, float[].class);
-                double cos = cosine(queryVec, vec);
-                scored.add(new double[]{pid, cos});
+                scored.add(new double[]{pid, cosine(queryVec, vec)});
             } catch (Exception e) {
                 log.debug("读取向量失败 {}: {}", key, e.getMessage());
             }
@@ -254,6 +278,26 @@ public class ProductRetrievalService {
                 .map(s -> toBrief(byId.get((long) s[0]), s[1]))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    /** 品类硬约束：类目名包含槽位品类（"手机"命中"手机通讯"），类目缺失时退回商品文本 */
+    private boolean matchCategory(Product p, String category, Map<Long, String> categoryNames) {
+        if (category == null || category.isBlank()) {
+            return true;
+        }
+        String catName = categoryNames.getOrDefault(p.getCategoryId(), "");
+        if (!catName.isEmpty()) {
+            return catName.contains(category);
+        }
+        return productText(p).contains(category);
+    }
+
+    /** 预算硬约束：超过预算 20% 即淘汰，避免"差一点就超"的商品混进结果 */
+    private boolean matchBudget(Product p, double budget) {
+        if (budget <= 0) {
+            return true;
+        }
+        return p.getPrice() != null && p.getPrice().doubleValue() <= budget * BUDGET_TOLERANCE;
     }
 
     private String buildQuery(Map<String, Object> slots) {
@@ -313,48 +357,40 @@ public class ProductRetrievalService {
         String brand = str(slots, "brand");
         double budget = slots != null && slots.get("budget") instanceof Number n ? n.doubleValue() : 0;
 
-        // 品类筛选：问"手机"不应召回耳机/平板（命中不足 3 件时才放开）
-        List<Product> pool = products;
-        if (!category.isEmpty()) {
-            List<Product> matched = products.stream()
-                    .filter(p -> categoryNames.getOrDefault(p.getCategoryId(), "").contains(category)
-                            || productText(p).contains(category))
-                    .collect(Collectors.toList());
-            if (matched.size() >= 3) {
-                pool = matched;
-            }
-        }
-        // 预算上限：超预算 20% 以上剔除（留少量上浮空间）
-        if (budget > 0) {
-            List<Product> inBudget = pool.stream()
-                    .filter(p -> p.getPrice() != null && p.getPrice().doubleValue() <= budget * 1.2)
-                    .collect(Collectors.toList());
-            if (inBudget.size() >= 2) {
-                pool = inBudget;
-            }
+        // 1. 硬约束过滤：品类/预算不满足的商品直接排除。
+        //    旧实现是「命中不足 3 件就放开品类、不足 2 件就放开预算」，等于永远凑满 5 条、
+        //    永远不承认"没有符合条件的商品"——这是评测中弃答准确率 0% 的直接原因。
+        List<Product> pool = products.stream()
+                .filter(p -> matchCategory(p, category, categoryNames))
+                .filter(p -> matchBudget(p, budget))
+                .collect(Collectors.toList());
+        if (pool.isEmpty()) {
+            log.info("无满足硬约束的商品：category={} budget={}", category, budget);
+            return Collections.emptyList();
         }
 
+        boolean brandKnown = !brand.isEmpty() && products.stream()
+                .anyMatch(p -> brandNames.getOrDefault(p.getBrandId(), "").contains(brand));
         List<String> kwGroup = expandKeyword(keyword);
         List<double[]> scored = new ArrayList<>();
         for (Product p : pool) {
             double score = 0.5; // 基础分
             String text = productText(p);
             String catName = categoryNames.getOrDefault(p.getCategoryId(), "");
+            boolean catHit = !category.isEmpty() && catName.contains(category);
+            boolean brandHit = false;
 
-            if (!category.isEmpty() && (catName.contains(category) || text.contains(category))) {
+            if (catHit) {
                 score += 3;
             }
-            if (!brand.isEmpty()) {
-                String bName = brandNames.getOrDefault(p.getBrandId(), "");
-                if (bName.contains(brand) || text.contains(brand)) {
-                    score += 2;
-                }
+            if (!brand.isEmpty()
+                    && (brandNames.getOrDefault(p.getBrandId(), "").contains(brand) || text.contains(brand))) {
+                brandHit = true;
+                score += 2;
             }
-            if (!kwGroup.isEmpty()) {
-                long hits = kwGroup.stream().filter(text::contains).count();
-                if (hits > 0) {
-                    score += 2 * Math.min(hits, 2);
-                }
+            long hits = kwGroup.stream().filter(text::contains).count();
+            if (hits > 0) {
+                score += 2 * Math.min(hits, 2);
             }
             if (budget > 0) {
                 double price = p.getPrice() == null ? 0 : p.getPrice().doubleValue();
@@ -364,7 +400,15 @@ public class ProductRetrievalService {
                 // 销量仅作微调，避免低价爆款压过用户真实需求
                 score += Math.min(p.getSales() / 5000.0, 0.5);
             }
+            // 2. 相关度门槛：用户明确提了关键词/品牌，却一条都没命中，不应占位凑数
+            boolean relevant = catHit || brandHit || hits > 0;
+            if ((!keyword.isEmpty() || brandKnown) && !relevant) {
+                continue;
+            }
             scored.add(new double[]{p.getId(), score});
+        }
+        if (scored.isEmpty()) {
+            return Collections.emptyList();
         }
         Map<Long, Product> byId = products.stream().collect(Collectors.toMap(Product::getId, p -> p));
         double max = scored.stream().mapToDouble(s -> s[1]).max().orElse(1);

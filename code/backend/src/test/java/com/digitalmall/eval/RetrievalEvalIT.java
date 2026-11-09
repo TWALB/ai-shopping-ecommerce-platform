@@ -37,17 +37,20 @@ class RetrievalEvalIT {
     void runEvaluation() throws Exception {
         Assertions.assertTrue(evalService.datasetSize() >= 60, "评测集样本数应不少于 60 条");
 
-        Map<String, Object> report = evalService.run(false);
+        // -Deval.vector=true 时启用 Embedding 通路（需要已配置 Key 且向量库已同步），
+        // 默认关闭，保证无网/未同步环境下仍可复现本地结构化召回的结果。
+        boolean includeVector = Boolean.parseBoolean(System.getProperty("eval.vector", "false"));
+        Map<String, Object> report = evalService.run(includeVector);
         List<Map<String, Object>> systems = (List<Map<String, Object>>) report.get("systems");
         Assertions.assertEquals(3, systems.size(), "应包含 B0 基线、B1 Oracle、B2 端到端三条通路");
 
         String json = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(report);
-        Path out = Path.of("target", "retrieval-eval-report.json");
+        Path out = Path.of("target", includeVector ? "retrieval-eval-report-vector.json" : "retrieval-eval-report.json");
         Files.createDirectories(out.getParent());
         Files.writeString(out, json, StandardCharsets.UTF_8);
 
         System.out.println();
-        System.out.println("================ 导购检索评测摘要 ================");
+        System.out.println("================ 导购检索评测摘要（" + (includeVector ? "向量通路" : "本地通路") + "）================");
         Map<String, Object> slots = (Map<String, Object>) report.get("intentAndSlots");
         System.out.printf("意图(4类) %.1f%%  意图(检索/非检索) %.1f%%  品类槽位 %.1f%%  预算槽位 %.1f%%%n",
                 pct(slots.get("intentAcc")), pct(slots.get("intentBinaryAcc")),

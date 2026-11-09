@@ -16,7 +16,7 @@
 ├── 测试商品数据.sql                     8件测试商品（含SKU/参数/图片）
 │
 ├── 验证-建表SQL.py / 验证-ER图HTML.py / 验证-接口文档.py / 验证-测试数据SQL.py   产物校验脚本
-├── 评测-导购检索报告.py                 读取评测结果 JSON，生成 deliverables/导购检索评测报告.md
+├── scripts/eval-report.py             读取评测结果 JSON，生成 deliverables/导购检索评测报告.md
 │
 └── code/                              前后端工程代码
     ├── backend/       Spring Boot 3 + MyBatis-Plus + Redis + JWT
@@ -92,7 +92,7 @@ DROP DATABASE IF EXISTS `digital_mall`;
 - 接口：`POST /api/chat/send`（SSE，事件序列 `intent` → `products` → `answer`（delta 增量）→ `done`）；会话与历史：`/api/chat/session`、`/api/chat/session/page`、`/api/chat/message/page`
 - 双模式：未提供真实 Key（`application.yml` 中保持占位符、`application-local.yml` 未配置）时自动降级为「规则意图识别 + 本地结构化召回 + 模板分段推送」，无网络也能完整演示；填入真实 Key（豆包方舟或任意 OpenAI 兼容端点）后切换为「Embedding 向量召回 + LLM 流式生成」
 - 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → AI 知识库（RAG） → 商品知识库」点「全量重建向量」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
-- 召回策略：对比类问题优先精确匹配用户点名的机型/品牌；找商品类按「品类 → 预算上限 → 关键词同义词 → 品牌 → 销量微调」排序，超出预算 20% 以上直接剔除
+- 召回策略：**先硬约束过滤、再语义排序**。对比类问题优先精确匹配用户点名的机型/品牌；找商品类先按「品类 → 预算上限（超 20% 剔除）」过滤候选集，再按「关键词同义词 → 品牌 → 销量微调」打分；向量通路在排序前应用同一套硬约束。过滤后为空即如实告知「没有符合条件的商品」，不凑数
 
 ## 管理端 AI 模块（知识库 RAG / 智能导购与运营）
 
@@ -121,10 +121,12 @@ DROP DATABASE IF EXISTS `digital_mall`;
 核心创新点需要数据支撑，因此单独提供了一套带标注的离线评测，回答「相比普通关键词搜索，智能导购好在哪里」。
 
 - 评测集：`code/backend/src/main/resources/eval/retrieval-eval.json`，60 条标注样本，每条含标准意图、标准槽位、可接受商品集合、样本类型（找货 / 应弃答 / 开放式 / 域外）
-- 执行方式（需要 MySQL 已导入建表 SQL 与测试商品数据.sql）：
+- 执行方式（需要 MySQL 已导入建表 SQL 与测试商品数据）：
   ```bash
-  cd code/backend && mvn -Dtest=RetrievalEvalIT test     # 产出 target/retrieval-eval-report.json
-  python 评测-导购检索报告.py                              # 产出 deliverables/导购检索评测报告.md
+  cd code/backend
+  mvn -Dtest=RetrievalEvalIT test                      # 本地结构化通路 → target/retrieval-eval-report.json
+  mvn -Dtest=RetrievalEvalIT -Deval.vector=true test   # 向量通路 → target/retrieval-eval-report-vector.json
+  python scripts/eval-report.py                        # 产出 deliverables/导购检索评测报告.md
   ```
   该测试类命名为 `*IT`，不会被 `mvn test` 自动拉起，也不占用 8080，可与正在运行的后端共存
 - 三条对照通路（同数据集、同语料、同一套排序代码，只改变槽位来源）：
@@ -133,7 +135,9 @@ DROP DATABASE IF EXISTS `digital_mall`;
   - `B2` 本文方案（端到端）：喂入规则意图识别出的槽位，反映线上真实链路
 - 指标：意图准确率（4 类 + 检索/非检索二分类）、品类/预算槽位准确率、Hit@5、Recall@5、Precision@5、MRR、预算越界率、跨品类错配率、弃答准确率、平均耗时
 - 管理端接口：`GET /api/admin/chat/eval?vector=false`（仅管理员），返回同一份报告 JSON，便于后续在「管理后台」做可视化
-- 设计约束：强制关闭向量通路（`allowVector=false`），否则「是否配置了大模型 Key」「向量库是否同步」会让同一份数据集在不同机器上得出不同结论，评测失去可比性；向量通路的对照需在固定环境下单独执行
+- 设计约束：默认关闭向量通路（`allowVector=false`），保证未配 Key / 未同步向量时也能复现同一份结果；向量通路需显式加 `-Deval.vector=true`，且应在固定模型与已同步向量的环境下执行
+- 实测结论（8 件商品语料，60 条标注）：B1 标注槽位下 Precision@5 **61.3%（本地）/ 68.7%（向量）**，预算越界率 **0%**，错品类率 **0%**，弃答准确率 **87.5%**；对照基线 B0 的 Precision 为 43.5%、越界率 43.3%、弃答 12.5%。端到端（B2）仍受槽位识别精度限制（预算槽位 81.5%、品类槽位 74.6%），是当前主要瓶颈
+- 评测同时用于回归：修复「命中不足就放开约束」的兜底后，弃答准确率由 0% 提升到 87.5%，失败样本从 8 条降到 1 条
 
 ## 售后模块说明（⑦）
 

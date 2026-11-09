@@ -371,8 +371,8 @@ public class RetrievalEvalService {
         private int precisionHit;
         private int precisionReturned;
         private int crossCategoryReturned;
-        /** 跨品类判定中「落在正确品类」的条数，错配率 = (返回数 - 本值) / 返回数 */
-        private int crossCategoryOk;
+        /** 跨品类错配条数，错配率 = 错配条数 / 返回条数 */
+        private int crossCategoryWrong;
         private int abstainN;
         private int abstainOk;
         private long latencySum;
@@ -412,7 +412,7 @@ public class RetrievalEvalService {
                         crossCategoryReturned++;
                         String cat = corpus.categories().getOrDefault(id, "");
                         if (!cat.contains(gtCategory)) {
-                            crossCategoryOk++;
+                            crossCategoryWrong++;
                         }
                     }
                 }
@@ -455,7 +455,7 @@ public class RetrievalEvalService {
             m.put("budgetViolationRate", round(budgetViolation()));
             m.put("crossCategoryReturned", crossCategoryReturned);
             m.put("crossCategoryMissRate", round(crossCategoryReturned == 0 ? 0
-                    : (double) (crossCategoryReturned - crossCategoryOk) / crossCategoryReturned));
+                    : (double) crossCategoryWrong / crossCategoryReturned));
             m.put("abstainSamples", abstainN);
             m.put("abstainCorrect", abstainOk);
             m.put("abstainAcc", round(abstainN == 0 ? 0 : (double) abstainOk / abstainN));
