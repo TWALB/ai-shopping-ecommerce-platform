@@ -91,8 +91,30 @@ DROP DATABASE IF EXISTS `digital_mall`;
 - 链路：意图识别（find_product / compare / recommend / chat + 槽位）→ 商品召回（Top5）→ 组装 Prompt → 流式生成 → 落库
 - 接口：`POST /api/chat/send`（SSE，事件序列 `intent` → `products` → `answer`（delta 增量）→ `done`）；会话与历史：`/api/chat/session`、`/api/chat/session/page`、`/api/chat/message/page`
 - 双模式：未提供真实 Key（`application.yml` 中保持占位符、`application-local.yml` 未配置）时自动降级为「规则意图识别 + 本地结构化召回 + 模板分段推送」，无网络也能完整演示；填入真实 Key（豆包方舟或任意 OpenAI 兼容端点）后切换为「Embedding 向量召回 + LLM 流式生成」
-- 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → 商品管理 → 重建导购知识库」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
+- 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → AI 知识库（RAG） → 商品知识库」点「全量重建向量」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
 - 召回策略：对比类问题优先精确匹配用户点名的机型/品牌；找商品类按「品类 → 预算上限 → 关键词同义词 → 品牌 → 销量微调」排序，超出预算 20% 以上直接剔除
+
+## 管理端 AI 模块（知识库 RAG / 智能导购与运营）
+
+管理后台左侧菜单按三组组织：平台运营、AI 知识库（RAG）、AI 智能导购与运营。AI 两组共 10 个页面，全部读取现有表与 Redis 向量索引，**不新增数据库表**。
+
+| 页面 | 路由 | 数据来源 | 能回答的问题 |
+|---|---|---|---|
+| 商品知识库 | `/admin/ai/knowledge/products` | product / product_attr / Redis | 哪些商品已建向量、知识文本多长、单条重建 |
+| 商品知识切片 | `/admin/ai/knowledge/chunks` | 同上（按字段切分） | 模型到底"看得见"哪些字段 |
+| Embedding 检索 | `/admin/ai/knowledge/search` | IntentService + ProductRetrievalService | 同一句话会召回什么、走向量还是本地通路 |
+| AI 智能导购任务 | `/admin/ai/guide/tasks` | chat_session / chat_message | 谁在问、问了几轮、最近一次意图 |
+| Agent Run 运行记录 | `/admin/ai/guide/runs` | chat_message（role=1） | 哪次回答召回少、回答短、token 高 |
+| Agent Step 执行步骤 | `/admin/ai/guide/steps` | 同上的运行记录反推 | 一次运行的四步回放（提问→意图→召回→生成） |
+| AI 推荐商品 | `/admin/ai/guide/recommend` | chat_message.product_ids 聚合 | 推荐多但销量低的商品 |
+| AI 商品问答 | `/admin/ai/qa` | 提问 + 紧随其后的回答 | 高频问题与回答缺陷 |
+| AI 评价分析 | `/admin/ai/comment` | comment（规则统计） | 评分分布、差评关键词、未回复数 |
+| AI 运营增长报告 | `/admin/ai/report` | chat_session / chat_message / order | 会话数、转化率、每日趋势、意图分布 |
+
+- 后端入口：`AdminAiController`（`/api/admin/ai/**`，`@RequireRole(ADMIN)`）+ `AdminAiService`
+- 检索页复用线上链路（`IntentService.recognize` → `ProductRetrievalService.retrieve`），因此「页面上看到的召回结果」与商城端用户看到的一致
+- 向量未同步或未配置 Key 时，页面会显式标注「已降级为本地结构化召回」，不隐藏降级行为
+- 冒烟脚本：`python scripts/verify-admin-ai.py`（登录后依次调用 10 个接口并打印关键字段）
 
 ## 导购检索评测（可复现）
 

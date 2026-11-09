@@ -147,6 +147,76 @@ public class ProductRetrievalService {
         return synced;
     }
 
+    /** 单个商品向量化（管理端「商品知识库」按条重建） */
+    public int syncOne(Long productId) {
+        if (!llmClient.available()) {
+            throw new IllegalStateException("未配置可用的大模型 api-key，无法执行向量化；当前导购使用本地检索模式");
+        }
+        Product p = productMapper.selectById(productId);
+        if (p == null) {
+            throw new IllegalStateException("商品不存在：" + productId);
+        }
+        try {
+            float[] vec = llmClient.embed(buildProductText(p));
+            if (vec == null) {
+                return 0;
+            }
+            redisTemplate.opsForValue().set(
+                    EMBED_KEY_PREFIX + p.getId(),
+                    objectMapper.writeValueAsString(vec),
+                    7, TimeUnit.DAYS);
+            return 1;
+        } catch (Exception e) {
+            log.warn("商品 {} 向量化失败: {}", productId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /** 向量索引是否可用：已配置 Key 且至少有一条商品向量 */
+    public boolean vectorReady() {
+        if (!llmClient.available()) {
+            return false;
+        }
+        Set<String> keys = redisTemplate.keys(EMBED_KEY_PREFIX + "*");
+        return keys != null && !keys.isEmpty();
+    }
+
+    /** 参与向量化的知识文本（管理端切片预览用，与 syncKnowledge 写入的文本完全一致） */
+    public String knowledgeText(Long productId) {
+        Product p = productMapper.selectById(productId);
+        return p == null ? "" : buildProductText(p);
+    }
+
+    /** 向量索引中的商品 ID 集合（管理端展示同步状态，避免逐条 EXISTS） */
+    public Set<Long> vectorizedIds() {
+        Set<String> keys = redisTemplate.keys(EMBED_KEY_PREFIX + "*");
+        if (keys == null || keys.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<Long> ids = new HashSet<>();
+        for (String key : keys) {
+            try {
+                ids.add(Long.valueOf(key.substring(EMBED_KEY_PREFIX.length())));
+            } catch (NumberFormatException ignored) {
+                // 非本前缀的商品键，忽略
+            }
+        }
+        return ids;
+    }
+
+    /** 读某商品向量维度（未同步返回 0） */
+    public int vectorDim(Long productId) {
+        String raw = redisTemplate.opsForValue().get(EMBED_KEY_PREFIX + productId);
+        if (raw == null) {
+            return 0;
+        }
+        try {
+            return objectMapper.readValue(raw, float[].class).length;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     // ==================== 向量检索 ====================
 
     private List<ProductBriefVO> vectorRetrieve(List<Product> products, Map<String, Object> slots) {

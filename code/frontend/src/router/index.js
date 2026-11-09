@@ -50,7 +50,19 @@ const routes = [
     component: () => import('../layouts/AdminLayout.vue'),
     meta: { role: 2, title: '管理后台' },
     children: [
-      { path: '', component: () => import('../views/AdminDashboard.vue'), meta: { title: '管理后台' } }
+      { path: '', component: () => import('../views/AdminDashboard.vue'), meta: { title: '管理后台' } },
+      // AI 知识库（RAG）
+      { path: 'ai/knowledge/products', component: () => import('../views/admin/AiKnowledge.vue'), meta: { title: '商品知识库' } },
+      { path: 'ai/knowledge/chunks', component: () => import('../views/admin/AiChunks.vue'), meta: { title: '商品知识切片' } },
+      { path: 'ai/knowledge/search', component: () => import('../views/admin/AiEmbeddingSearch.vue'), meta: { title: 'Embedding 检索' } },
+      // AI 智能导购与运营
+      { path: 'ai/guide/tasks', component: () => import('../views/admin/AiTasks.vue'), meta: { title: 'AI 智能导购任务' } },
+      { path: 'ai/guide/runs', component: () => import('../views/admin/AiRuns.vue'), meta: { title: 'Agent Run 运行记录' } },
+      { path: 'ai/guide/steps', component: () => import('../views/admin/AiSteps.vue'), meta: { title: 'Agent Step 执行步骤' } },
+      { path: 'ai/guide/recommend', component: () => import('../views/admin/AiRecommend.vue'), meta: { title: 'AI 推荐商品' } },
+      { path: 'ai/qa', component: () => import('../views/admin/AiQa.vue'), meta: { title: 'AI 商品问答' } },
+      { path: 'ai/comment', component: () => import('../views/admin/AiCommentAnalysis.vue'), meta: { title: 'AI 评价分析' } },
+      { path: 'ai/report', component: () => import('../views/admin/AiReport.vue'), meta: { title: 'AI 运营增长报告' } }
     ]
   }
 ]

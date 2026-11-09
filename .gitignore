@@ -36,3 +36,10 @@ build-check.log
 tmp-*.log
 tmp-sql*.txt
 
+
+# 本地验证产物
+restart-backend*.log
+dev-server.log
+.playwright-cli/
+.workbuddy/
+unknow/
