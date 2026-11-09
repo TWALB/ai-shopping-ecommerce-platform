@@ -29,6 +29,7 @@
         <div class="shop-box" v-if="detail.shop">
           <el-icon><Shop /></el-icon>
           <span class="shop-name">{{ detail.shop.shopName }}</span>
+          <el-button class="shop-ask" link type="primary" @click="openComplaint">咨询商家</el-button>
         </div>
 
         <!-- 规格选择 -->
@@ -102,6 +103,26 @@
                      @current-change="loadComments" />
     </el-card>
 
+    <el-dialog v-model="complaintDialog" title="咨询商家" width="460px">
+      <el-form label-width="76px">
+        <el-form-item label="店铺">{{ detail?.shop?.shopName }}</el-form-item>
+        <el-form-item label="类型">
+          <el-radio-group v-model="complaintForm.type">
+            <el-radio :value="0">咨询</el-radio>
+            <el-radio :value="1">投诉</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="内容" required>
+          <el-input v-model="complaintForm.content" type="textarea" :rows="4" maxlength="1000" show-word-limit
+                    placeholder="请描述你的问题，商家回复后可在「我的咨询」查看" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="complaintDialog = false">取消</el-button>
+        <el-button type="primary" :loading="complaintLoading" @click="submitComplaint">提交</el-button>
+      </template>
+    </el-dialog>
+
     <el-button class="back-btn" @click="$router.back()">← 返回</el-button>
   </div>
 </template>
@@ -113,6 +134,7 @@ import { ElMessage } from 'element-plus'
 import { getProductDetail } from '../api/product'
 import { addToCart } from '../api/cart'
 import { getProductComments } from '../api/comment'
+import { createComplaint } from '../api/complaint'
 
 const route = useRoute()
 const router = useRouter()
@@ -171,6 +193,37 @@ function toggleFavorite() {
   ElMessage.info('收藏功能后续迭代实现')
 }
 
+// ===== 咨询/投诉商家 =====
+const complaintDialog = ref(false)
+const complaintLoading = ref(false)
+const complaintForm = ref({ type: 0, content: '' })
+
+function openComplaint() {
+  if (!detail.value?.shop) return
+  complaintForm.value = { type: 0, content: '' }
+  complaintDialog.value = true
+}
+
+async function submitComplaint() {
+  const content = complaintForm.value.content.trim()
+  if (!content) {
+    ElMessage.warning('请填写咨询内容')
+    return
+  }
+  complaintLoading.value = true
+  try {
+    await createComplaint({
+      shopId: detail.value.shop.id,
+      type: complaintForm.value.type,
+      content
+    })
+    ElMessage.success('已提交，商家回复后可在「我的咨询」查看')
+    complaintDialog.value = false
+  } catch (e) { /* 错误已统一提示 */ } finally {
+    complaintLoading.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -187,6 +240,7 @@ onMounted(load)
 .meta-row { display: flex; gap: 20px; color: #64748b; font-size: 13px; margin-bottom: 12px; }
 .shop-box { display: flex; align-items: center; gap: 6px; padding: 10px 0; border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; margin-bottom: 12px; }
 .shop-name { font-weight: 600; }
+.shop-ask { margin-left: auto; }
 .sku-box { margin-bottom: 12px; }
 .sku-label { font-size: 14px; color: #475569; margin-bottom: 6px; }
 .qty-box { margin-bottom: 16px; }

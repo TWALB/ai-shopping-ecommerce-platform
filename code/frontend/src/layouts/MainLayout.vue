@@ -19,6 +19,7 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item command="complaints">我的咨询</el-dropdown-item>
               <el-dropdown-item command="password">修改密码</el-dropdown-item>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
@@ -78,6 +79,8 @@ async function handleCommand(command) {
     try { await logoutApi() } catch (e) { /* 后端不可用时也允许本地退出 */ }
     userStore.logout()
     router.push('/login')
+  } else if (command === 'complaints') {
+    router.push('/complaints')
   } else if (command === 'password') {
     pwdForm.value = { oldPassword: '', newPassword: '', confirm: '' }
     pwdDialog.value = true

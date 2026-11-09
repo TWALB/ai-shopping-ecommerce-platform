@@ -31,6 +31,7 @@ const routes = [
       { path: 'orders', component: () => import('../views/OrderList.vue'), meta: { title: '我的订单' } },
       { path: 'orders/:id', component: () => import('../views/OrderDetail.vue'), meta: { title: '订单详情' } },
       { path: 'after-sales', component: () => import('../views/AfterSaleList.vue'), meta: { title: '我的售后' } },
+      { path: 'complaints', component: () => import('../views/ComplaintList.vue'), meta: { title: '我的咨询' } },
       { path: 'merchant/apply', component: () => import('../views/MerchantApply.vue'), meta: { title: '商家入驻' } }
     ]
   },

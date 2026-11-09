@@ -170,6 +170,53 @@
           <el-empty v-else description="暂无销售数据" style="margin-top: 24px" />
         </div>
 
+        <!-- 客户咨询/投诉 -->
+        <div v-show="activeTab === 'complaints'">
+          <div class="tool-row">
+            <el-radio-group v-model="cpStatus" @change="loadComplaints">
+              <el-radio-button :value="''">全部</el-radio-button>
+              <el-radio-button :value="0">待处理</el-radio-button>
+              <el-radio-button :value="1">已回复</el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <el-table :data="complaints" v-loading="cpLoading" stripe>
+            <el-table-column label="关联订单" min-width="150">
+              <template #default="{ row }">
+                <div class="mono-text">{{ row.orderNo || '—' }}</div>
+                <div class="empty-text">{{ row.createdTime?.replace('T', ' ') }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.type === 1 ? 'danger' : 'info'" size="small">{{ row.type === 1 ? '投诉' : '咨询' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="客户" width="100">
+              <template #default="{ row }">{{ row.username }}</template>
+            </el-table-column>
+            <el-table-column label="内容与回复" min-width="220">
+              <template #default="{ row }">
+                <div class="cp-content">{{ row.content }}</div>
+                <div v-if="row.replyContent" class="cp-reply">回复：{{ row.replyContent }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'warning'" size="small">
+                  {{ row.status === 1 ? '已回复' : '待处理' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="95" fixed="right">
+              <template #default="{ row }">
+                <el-button v-if="row.status === 0" size="small" type="primary" link @click="openReply(row)">回复</el-button>
+                <span v-else class="empty-text">已处理</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
         <!-- 售后处理 -->
         <div v-show="activeTab === 'aftersales'">
           <div class="tool-row">
@@ -350,6 +397,24 @@
       </template>
     </el-dialog>
 
+    <!-- 回复咨询/投诉弹窗 -->
+    <el-dialog v-model="replyDialog" title="回复客户" width="460px">
+      <el-form label-width="72px">
+        <el-form-item label="客户">{{ replyRow?.username }}</el-form-item>
+        <el-form-item label="内容">
+          <div class="cp-quote">{{ replyRow?.content }}</div>
+        </el-form-item>
+        <el-form-item label="回复" required>
+          <el-input v-model="replyContent" type="textarea" :rows="4" maxlength="1000" show-word-limit
+                    placeholder="请输入回复内容，提交后状态变为「已回复」" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="replyDialog = false">取消</el-button>
+        <el-button type="primary" :loading="replyLoading" @click="submitReply">提交回复</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 发货弹窗 -->
     <el-dialog v-model="deliverDialog" title="订单发货" width="460px">
       <el-form :model="deliverForm" label-width="90px">
@@ -378,6 +443,7 @@ import {
 } from '../api/merchant'
 import { getCategoryTree, getBrandList, getProductDetail } from '../api/product'
 import { getMerchantAfterSalePage, handleAfterSale } from '../api/afterSale'
+import { getMerchantComplaintPage, replyComplaint } from '../api/complaint'
 
 const route = useRoute()
 const placeholder = 'https://via.placeholder.com/80'
@@ -636,6 +702,52 @@ async function loadMeta() {
   } catch (e) { /* 忽略 */ }
 }
 
+// ===== 客户咨询/投诉 =====
+const complaints = ref([])
+const cpLoading = ref(false)
+const cpStatus = ref('')
+const replyDialog = ref(false)
+const replyLoading = ref(false)
+const replyRow = ref(null)
+const replyContent = ref('')
+
+async function loadComplaints() {
+  cpLoading.value = true
+  try {
+    const data = await getMerchantComplaintPage({
+      pageNum: 1,
+      pageSize: 20,
+      status: cpStatus.value === '' ? undefined : cpStatus.value
+    })
+    complaints.value = data.list || []
+  } catch (e) { /* 忽略 */ } finally {
+    cpLoading.value = false
+  }
+}
+
+function openReply(row) {
+  replyRow.value = row
+  replyContent.value = ''
+  replyDialog.value = true
+}
+
+async function submitReply() {
+  const text = replyContent.value.trim()
+  if (!text) {
+    ElMessage.warning('请输入回复内容')
+    return
+  }
+  replyLoading.value = true
+  try {
+    await replyComplaint(replyRow.value.id, text)
+    ElMessage.success('已回复客户')
+    replyDialog.value = false
+    loadComplaints()
+  } catch (e) { /* 错误已统一提示 */ } finally {
+    replyLoading.value = false
+  }
+}
+
 /** 侧边栏菜单切换：按 tab 加载对应区块数据 */
 function onTabChange(tab) {
   const loaders = {
@@ -643,7 +755,8 @@ function onTabChange(tab) {
     products: loadProducts,
     orders: loadOrders,
     stats: loadStats,
-    aftersales: loadAfterSales
+    aftersales: loadAfterSales,
+    complaints: loadComplaints
   }
   loaders[tab]?.()
 }
@@ -685,4 +798,7 @@ onMounted(() => {
 .line-w1 { width: 200px; }
 .line-w2 { width: 130px; }
 .line-w3 { flex: 1; }
+.cp-content { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: #334155; }
+.cp-reply { margin-top: 4px; font-size: 12px; color: #0f766e; }
+.cp-quote { width: 100%; padding: 8px 12px; background: #f8fafc; border-radius: 6px; font-size: 13px; color: #475569; white-space: pre-wrap; }
 </style>
