@@ -5,11 +5,13 @@ import com.digitalmall.common.Result;
 import com.digitalmall.dto.NoticeRequest;
 import com.digitalmall.security.RequireRole;
 import com.digitalmall.service.AdminService;
+import com.digitalmall.service.RetrievalEvalService;
 import com.digitalmall.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 管理员模块（接口文档：十一、管理员 用户/审核/商品/订单/公告/统计）
@@ -22,6 +24,16 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final RetrievalEvalService retrievalEvalService;
+
+    /**
+     * 导购检索离线评测：跑一遍标注评测集，返回意图/槽位/召回指标、基线与本文方案的差值、失败样本。
+     * vector=false（默认）强制本地检索通路，保证不同机器、不同 Key 配置下结果可复现。
+     */
+    @GetMapping("/chat/eval")
+    public Result<Map<String, Object>> chatEval(@RequestParam(defaultValue = "false") boolean vector) {
+        return Result.success(retrievalEvalService.run(vector));
+    }
 
     /** 用户管理分页 */
     @GetMapping("/user/page")

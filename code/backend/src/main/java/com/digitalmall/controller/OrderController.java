@@ -9,6 +9,7 @@ import com.digitalmall.vo.CreateOrderVO;
 import com.digitalmall.vo.OrderDetailVO;
 import com.digitalmall.vo.OrderVO;
 import com.digitalmall.vo.TrackVO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +28,7 @@ public class OrderController {
 
     /** 创建订单（核心交易接口：库存扣减 + 快照 + 按店铺分单） */
     @PostMapping
-    public Result<List<CreateOrderVO>> create(@RequestBody CreateOrderRequest request) {
+    public Result<List<CreateOrderVO>> create(@Valid @RequestBody CreateOrderRequest request) {
         return Result.success(orderService.create(request));
     }
 

@@ -53,6 +53,15 @@ public class ProductRetrievalService {
 
     /** 按槽位召回商品（Top5） */
     public List<ProductBriefVO> retrieve(Map<String, Object> slots, String content, String intent) {
+        return retrieve(slots, content, intent, llmClient.available());
+    }
+
+    /**
+     * 按槽位召回商品（Top5）。
+     * allowVector=false 时跳过向量通路，强制走本地结构化匹配——评测需要可复现的确定性结果，
+     * 避免“是否配置了 Key”“向量库是否同步过”影响同一份数据集的横向对比。
+     */
+    public List<ProductBriefVO> retrieve(Map<String, Object> slots, String content, String intent, boolean allowVector) {
         List<Product> products = onSaleProducts();
         if (products.isEmpty()) {
             return Collections.emptyList();
@@ -68,7 +77,7 @@ public class ProductRetrievalService {
             }
         }
         // 1. 优先向量检索
-        if (llmClient.available()) {
+        if (allowVector && llmClient.available()) {
             try {
                 List<ProductBriefVO> byVector = vectorRetrieve(products, slots);
                 if (!byVector.isEmpty()) {

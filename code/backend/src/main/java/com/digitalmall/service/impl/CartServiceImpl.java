@@ -36,6 +36,16 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void add(Long skuId, Integer quantity) {
+        // —— 入口校验（Service 层判空与范围，避免 @RequestParam 注解校验被全局兜底吞成 500）
+        if (skuId == null) {
+            throw new BusinessException(400, "缺少商品规格参数");
+        }
+        if (quantity == null || quantity < 1) {
+            throw new BusinessException(400, "数量必须大于 0");
+        }
+        if (quantity > 999) {
+            throw new BusinessException(400, "单次加入购物车数量不能超过 999");
+        }
         ProductSku sku = productSkuMapper.selectById(skuId);
         if (sku == null || sku.getStatus() == null || sku.getStatus() != 1) {
             throw new BusinessException(404, "商品规格不存在或已下架");
@@ -65,6 +75,10 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void updateQuantity(Long id, Integer quantity) {
+        // —— 入口校验（Service 层判空与范围，避免 @RequestParam 注解校验被全局兜底吞成 500）
+        if (quantity == null || quantity < 1 || quantity > 999) {
+            throw new BusinessException(400, "数量需在 1~999 之间");
+        }
         Cart cart = checkOwn(id);
         ProductSku sku = productSkuMapper.selectById(cart.getSkuId());
         if (sku != null && quantity > sku.getStock()) {

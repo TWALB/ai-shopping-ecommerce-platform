@@ -16,11 +16,13 @@
 ├── 测试商品数据.sql                     8件测试商品（含SKU/参数/图片）
 │
 ├── 验证-建表SQL.py / 验证-ER图HTML.py / 验证-接口文档.py / 验证-测试数据SQL.py   产物校验脚本
+├── 评测-导购检索报告.py                 读取评测结果 JSON，生成 deliverables/导购检索评测报告.md
 │
 └── code/                              前后端工程代码
     ├── backend/       Spring Boot 3 + MyBatis-Plus + Redis + JWT
     │                   ├ 认证闭环 ✓ 商品模块 ✓ 交易闭环（购物车/订单/支付/地址）✓
     │                   ├ 其余为按接口文档建好的骨架（README 见 code/backend/README.md）
+    │                   └ src/main/resources/eval/retrieval-eval.json  60 条带标注的检索评测集
     └── frontend/      Vue3 + Vite + Element Plus + Pinia
                         ├ 登录/注册/首页/商品/详情/导购聊天/购物车/结算/订单 已就绪（README 见 code/frontend/README.md）
                         ├ 三端分离：商城(MainLayout，仅用户) / 商家工作台(MerchantLayout) / 管理后台(AdminLayout)
@@ -33,12 +35,45 @@
 - 核心特色：大模型智能导购（LLM + 商品知识库向量检索 + SSE 流式对话）
 
 ## 快速启动
-1. MySQL 执行 `数码电商平台-数据库建表SQL.sql`（把管理员密码替换为 BCrypt 密文）
-2. 启动 Redis
-3. 后端配置：`cd code/backend/src/main/resources && Copy-Item application-local.yml.example application-local.yml`，在生成的文件里填入自己的大模型 Key（不填也能启动，导购自动走本地检索降级模式）
-4. 后端启动：`cd code/backend && mvn spring-boot:run`（8080）
-5. 前端：`cd code/frontend && npm install && npm run dev`（5173）
-6. 浏览器打开 http://localhost:5173
+1. MySQL 执行 `数码电商平台-数据库建表SQL.sql`
+   （建表 24 张 + 分类/品牌/管理员账号；admin 密码已内置可用的 BCrypt 密文）
+2. **MySQL 执行 `测试商品数据.sql`**
+   （8 件商品 + 1 个店铺 + 商家账号 merchant1）
+
+   > ⚠️ **这一步不能跳过**：建表 SQL 里没有任何商品数据。不执行则首页/商品列表为空，
+   > 智能导购会一律回答"抱歉，暂时没有完全匹配的商品"——核心功能看起来像坏了。
+   > ⚠️ 该脚本**只能执行一次**（含唯一键约束，重复执行会报 Duplicate entry）。
+   > 需要重跑请先 `DROP DATABASE digital_mall;` 重建，见「重置数据库」一节。
+
+3. 启动 Redis
+4. 后端配置：
+   `cd code/backend/src/main/resources && Copy-Item application-local.yml.example application-local.yml`
+   在生成的文件里填入自己的大模型 Key（**不填也能启动**，导购自动走本地检索降级模式）
+5. 后端启动：`cd code/backend && mvn spring-boot:run`（端口 8080）
+6. 前端：`cd code/frontend && npm install && npm run dev`（端口 5173）
+7. 浏览器打开 http://localhost:5173
+
+### 演示账号
+
+| 角色 | 账号 | 密码 | 说明 |
+|---|---|---|---|
+| 管理员 | `admin` | `admin123` | 管理后台 `/admin` |
+| 商家 | `merchant1` | `merchant123` | 商家工作台 `/merchant` |
+| 普通用户 | 自行注册 | — | 商城 `/` |
+
+> **登录提示"用户名或密码错误"时的排查顺序**
+> 1. 确认 `SELECT username, password FROM sys_user WHERE username IN ('admin','merchant1');`
+>    的 password 是 `$2a$` 开头、长度 60 的密文，而不是中文占位符；
+> 2. 若仍是占位符：重新执行建表/测试数据 SQL，或依赖启动自检
+>    `SeedPasswordInitializer`（会在启动日志打印"已自动重置为 admin123"）；
+> 3. 确认 Redis 已启动（登录态写 Redis，Redis 不可用会返回 503）。
+
+### 重置数据库（演示前准备干净环境）
+
+```sql
+DROP DATABASE IF EXISTS `digital_mall`;
+```
+然后重新按第 1、2 步执行。**不要**直接重复执行 `测试商品数据.sql`。
 
 ## 开发路线
 数据库（完成）→ 接口文档（完成）→ 脚手架（完成）→
@@ -58,6 +93,25 @@
 - 双模式：未提供真实 Key（`application.yml` 中保持占位符、`application-local.yml` 未配置）时自动降级为「规则意图识别 + 本地结构化召回 + 模板分段推送」，无网络也能完整演示；填入真实 Key（豆包方舟或任意 OpenAI 兼容端点）后切换为「Embedding 向量召回 + LLM 流式生成」
 - 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → 商品管理 → 重建导购知识库」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
 - 召回策略：对比类问题优先精确匹配用户点名的机型/品牌；找商品类按「品类 → 预算上限 → 关键词同义词 → 品牌 → 销量微调」排序，超出预算 20% 以上直接剔除
+
+## 导购检索评测（可复现）
+
+核心创新点需要数据支撑，因此单独提供了一套带标注的离线评测，回答「相比普通关键词搜索，智能导购好在哪里」。
+
+- 评测集：`code/backend/src/main/resources/eval/retrieval-eval.json`，60 条标注样本，每条含标准意图、标准槽位、可接受商品集合、样本类型（找货 / 应弃答 / 开放式 / 域外）
+- 执行方式（需要 MySQL 已导入建表 SQL 与测试商品数据.sql）：
+  ```bash
+  cd code/backend && mvn -Dtest=RetrievalEvalIT test     # 产出 target/retrieval-eval-report.json
+  python 评测-导购检索报告.py                              # 产出 deliverables/导购检索评测报告.md
+  ```
+  该测试类命名为 `*IT`，不会被 `mvn test` 自动拉起，也不占用 8080，可与正在运行的后端共存
+- 三条对照通路（同数据集、同语料、同一套排序代码，只改变槽位来源）：
+  - `B0` 关键词基线：中文二元组 + 英文词重叠计数，等价于 `LIKE '%词%'` 排序
+  - `B1` 本文方案（Oracle）：喂入标注槽位，隔离衡量检索本身的质量
+  - `B2` 本文方案（端到端）：喂入规则意图识别出的槽位，反映线上真实链路
+- 指标：意图准确率（4 类 + 检索/非检索二分类）、品类/预算槽位准确率、Hit@5、Recall@5、Precision@5、MRR、预算越界率、跨品类错配率、弃答准确率、平均耗时
+- 管理端接口：`GET /api/admin/chat/eval?vector=false`（仅管理员），返回同一份报告 JSON，便于后续在「管理后台」做可视化
+- 设计约束：强制关闭向量通路（`allowVector=false`），否则「是否配置了大模型 Key」「向量库是否同步」会让同一份数据集在不同机器上得出不同结论，评测失去可比性；向量通路的对照需在固定环境下单独执行
 
 ## 售后模块说明（⑦）
 

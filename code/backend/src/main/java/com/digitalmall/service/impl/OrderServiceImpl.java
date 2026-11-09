@@ -99,10 +99,16 @@ public class OrderServiceImpl implements OrderService {
     private CreateOrderVO createOneOrder(Long shopId, List<CartVO> lines, UserAddress addr, String remark) {
         // 预扣库存（原子条件更新，防超卖）
         for (CartVO line : lines) {
+            // —— 数量兜底，防购物车脏数据（历史 quantity<1 行、null 行）
+            Integer qty = line.getQuantity();
+            if (qty == null || qty < 1 || qty > 999) {
+                throw new BusinessException(400,
+                        "商品「" + line.getProductName() + "」数量不合法，请刷新购物车后重试");
+            }
             int updated = productSkuMapper.update(null, new LambdaUpdateWrapper<ProductSku>()
-                    .setSql("stock = stock - {0}", line.getQuantity())
+                    .setSql("stock = stock - {0}", qty)
                     .eq(ProductSku::getId, line.getSkuId())
-                    .ge(ProductSku::getStock, line.getQuantity()));
+                    .ge(ProductSku::getStock, qty));
             if (updated == 0) {
                 throw new BusinessException("商品「" + line.getProductName() + "」库存不足");
             }
@@ -122,6 +128,12 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal total = lines.stream()
                 .map(l -> l.getPrice().multiply(BigDecimal.valueOf(l.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // —— 金额兜底，防任何未来组合路径算出非正金额
+        if (total.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(400, "订单金额异常，已阻止下单");
+        }
+
         order.setTotalAmount(total);
         order.setPayAmount(total);
         orderMapper.insert(order);
@@ -270,6 +282,16 @@ public class OrderServiceImpl implements OrderService {
 
     /** 直接购买行组装（校验 SKU 与商品状态） */
     private CartVO buildLineFromSku(Long skuId, Integer quantity) {
+        // —— 参数兜底，防止绕过 DTO 校验（如内部调用、反序列化差异）
+        if (skuId == null) {
+            throw new BusinessException(400, "缺少商品规格参数");
+        }
+        if (quantity == null || quantity < 1) {
+            throw new BusinessException(400, "购买数量必须大于 0");
+        }
+        if (quantity > 999) {
+            throw new BusinessException(400, "单次购买数量不能超过 999");
+        }
         ProductSku sku = productSkuMapper.selectById(skuId);
         if (sku == null) {
             throw new BusinessException(404, "商品规格不存在");

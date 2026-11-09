@@ -272,6 +272,7 @@ async function confirm() {
 }
 
 function openComment() {
+  if (!detail.value?.items?.length) return
   const forms = {}
   detail.value.items.forEach((it) => {
     forms[it.orderItemId] = { productScore: 5, logisticsScore: 5, content: '', isAnonymous: false }
@@ -304,8 +305,8 @@ async function submitComments() {
   }
 }
 
-onMounted(() => {
-  load()
+onMounted(async () => {
+  await load()
   if (route.query.pay === '1') openPay()
   if (route.query.comment === '1') openComment()
 })
