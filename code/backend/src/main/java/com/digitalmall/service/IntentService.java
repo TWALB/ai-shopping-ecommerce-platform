@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 public class IntentService {
 
     private final LlmClient llmClient;
+    private final AiConfigService aiConfigService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final List<String> CATEGORIES = List.of(
@@ -46,10 +47,11 @@ public class IntentService {
     }
 
     private Map<String, Object> recognizeByLlm(String content) throws Exception {
-        String system = "你是电商导购意图识别器。只输出 JSON，不要解释。格式："
-                + "{\"intent\":\"find_product|compare|recommend|chat\",\"slots\":{\"category\":\"\",\"budget\":0,\"keyword\":\"\",\"brand\":\"\"}}。"
-                + "find_product=找商品；compare=参数对比；recommend=选购建议；chat=闲聊。"
-                + "category 从 手机/笔记本/平板/耳机/手表/相机/音箱/配件 中选，没有填空字符串；budget 为数字元，没有填 0；keyword 提炼核心需求（如 拍照/续航/游戏/轻薄），没有填空字符串。";
+        // 提示词来自管理端「AI 配置中心」，保存即生效；配置缺失时回落到内置默认值
+        String system = aiConfigService.render(AiConfigService.INTENT_PROMPT, Map.of());
+        if (system == null || system.isBlank()) {
+            system = AiConfigService.DEFAULT_INTENT_PROMPT;
+        }
         String answer = llmClient.chat(List.of(
                 Map.of("role", "system", "content", system),
                 Map.of("role", "user", "content", content)

@@ -5,10 +5,13 @@ import com.digitalmall.common.BusinessException;
 import com.digitalmall.entity.ChatMessage;
 import com.digitalmall.entity.ChatSession;
 import com.digitalmall.entity.Product;
+import com.digitalmall.entity.ProductAttr;
 import com.digitalmall.mapper.ChatMessageMapper;
 import com.digitalmall.mapper.ChatSessionMapper;
+import com.digitalmall.mapper.ProductAttrMapper;
 import com.digitalmall.mapper.ProductMapper;
 import com.digitalmall.security.UserContext;
+import com.digitalmall.service.AiConfigService;
 import com.digitalmall.service.ChatService;
 import com.digitalmall.service.IntentService;
 import com.digitalmall.service.LlmClient;
@@ -43,9 +46,11 @@ public class ChatServiceImpl implements ChatService {
     private final ChatSessionMapper sessionMapper;
     private final ChatMessageMapper messageMapper;
     private final ProductMapper productMapper;
+    private final ProductAttrMapper productAttrMapper;
     private final IntentService intentService;
     private final ProductRetrievalService retrievalService;
     private final LlmClient llmClient;
+    private final AiConfigService aiConfigService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Long uid() {
@@ -230,11 +235,18 @@ public class ChatServiceImpl implements ChatService {
     private List<Map<String, String>> buildLlmMessages(Long sessionId, Long excludeMsgId, String text,
                                                       List<ProductBriefVO> products,
                                                       Map<String, Object> slots, String intent) {
-        String system = "你是数码电商平台的智能导购助手。规则：\n"
-                + "1. 只能推荐下方【可推荐商品】中给出的商品，不得编造不存在的商品或参数；\n"
-                + "2. 结合用户预算与需求说明推荐理由，参数对比时用简洁表格；\n"
-                + "3. 回答用中文、分点、简洁，不要输出与导购无关的内容；\n"
-                + "4. 若没有合适商品，如实告知并建议调整预算或需求。";
+        // 系统提示词来自管理端「AI 配置中心」，保存即生效；配置缺失时回落到内置默认值
+        String system = aiConfigService.render(AiConfigService.CHAT_PROMPT, Map.of(
+                "productCount", String.valueOf(products.size()),
+                "intentLabel", intentLabel(intent)));
+        if (system == null || system.isBlank()) {
+            system = AiConfigService.DEFAULT_CHAT_PROMPT;
+        }
+
+        // 商品参数：一次批量查出后按商品分组，每件只注入前 N 条（N 可在配置中心调整）。
+        // 之前上下文只有名称/价格/销量，而提示词却要求「参数对比用表格」，模型拿不到参数只能编。
+        Map<Long, List<ProductAttr>> attrs = loadAttrs(products);
+        int attrLimit = aiConfigService.intValue(AiConfigService.ATTR_LIMIT, 6, 1, 12);
 
         StringBuilder knowledge = new StringBuilder("【可推荐商品】\n");
         if (products.isEmpty()) {
@@ -246,6 +258,10 @@ public class ChatServiceImpl implements ChatService {
                         .append("，价格 ").append(p.getPrice()).append(" 元");
                 if (p.getSales() != null) {
                     knowledge.append("，销量 ").append(p.getSales());
+                }
+                String attrText = attrLine(attrs.get(p.getId()), attrLimit);
+                if (!attrText.isEmpty()) {
+                    knowledge.append("，参数 ").append(attrText);
                 }
                 knowledge.append('\n');
             }
@@ -278,6 +294,52 @@ public class ChatServiceImpl implements ChatService {
         }
         messages.add(Map.of("role", "user", "content", knowledge.toString()));
         return messages;
+    }
+
+    /** 批量取商品参数：一次 IN 查询后按商品分组，避免 N 次单条查询 */
+    private Map<Long, List<ProductAttr>> loadAttrs(List<ProductBriefVO> products) {
+        if (products == null || products.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> ids = products.stream().map(ProductBriefVO::getId).filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return productAttrMapper.selectList(Wrappers.<ProductAttr>lambdaQuery()
+                            .in(ProductAttr::getProductId, ids)
+                            .orderByAsc(ProductAttr::getSortOrder))
+                    .stream()
+                    .filter(a -> a.getProductId() != null)
+                    .collect(Collectors.groupingBy(ProductAttr::getProductId));
+        } catch (Exception e) {
+            log.warn("商品参数读取失败，本次不注入参数: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /** 拼成「屏幕 6.7英寸；电池 5000mAh」这样的短句，超出条数截断 */
+    private String attrLine(List<ProductAttr> attrs, int limit) {
+        if (attrs == null || attrs.isEmpty()) {
+            return "";
+        }
+        return attrs.stream()
+                .limit(Math.max(1, limit))
+                .filter(a -> a.getAttrName() != null && a.getAttrValue() != null)
+                .map(a -> a.getAttrName() + " " + a.getAttrValue())
+                .collect(Collectors.joining("；"));
+    }
+
+    /** 意图中文名，供提示词占位符 {{intentLabel}} 使用 */
+    private String intentLabel(String intent) {
+        return switch (intent == null ? "" : intent) {
+            case "compare" -> "参数对比";
+            case "recommend" -> "选购建议";
+            case "find_product" -> "找商品";
+            case "chat" -> "闲聊";
+            default -> "找商品";
+        };
     }
 
     /** 本地模板回答（无 LLM 时的演示模式） */

@@ -3,17 +3,21 @@ package com.digitalmall.controller;
 import com.digitalmall.common.PageResult;
 import com.digitalmall.common.Result;
 import com.digitalmall.security.RequireRole;
+import com.digitalmall.security.UserContext;
 import com.digitalmall.service.AdminAiService;
+import com.digitalmall.service.AiConfigService;
 import com.digitalmall.vo.AdminAiVO;
+import com.digitalmall.vo.AiConfigVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 管理端 AI 模块：知识库（RAG）/ 智能导购与运营。
- * 全部只读聚合，仅管理员可访问；向量重建复用 ProductRetrievalService。
+ * 管理端 AI 模块：知识库（RAG）/ 智能导购与运营 / 配置中心。
+ * 除配置写入外均为只读聚合，仅管理员可访问；向量重建复用 ProductRetrievalService。
  */
 @RestController
 @RequestMapping("/api/admin/ai")
@@ -22,6 +26,7 @@ import java.util.Map;
 public class AdminAiController {
 
     private final AdminAiService adminAiService;
+    private final AiConfigService aiConfigService;
 
     // ==================== AI 知识库（RAG） ====================
 
@@ -121,5 +126,36 @@ public class AdminAiController {
     @GetMapping("/report/overview")
     public Result<AdminAiVO.Report> report(@RequestParam(defaultValue = "7") int days) {
         return Result.success(adminAiService.report(days));
+    }
+
+    // ==================== AI 配置中心（提示词与运行参数） ====================
+
+    /** 配置列表：当前值、默认值、可用变量、版本与更新时间 */
+    @GetMapping("/config")
+    public Result<List<AiConfigVO>> configList() {
+        return Result.success(aiConfigService.list());
+    }
+
+    /** 保存配置：写库并刷新缓存，下一个对话请求即生效，无需重启 */
+    @PutMapping("/config")
+    public Result<AiConfigVO> saveConfig(@RequestBody Map<String, String> body) {
+        return Result.success(aiConfigService.save(body.get("key"), body.get("value"), UserContext.getUserId()));
+    }
+
+    /** 恢复内置默认值（版本号继续自增，可追溯） */
+    @PostMapping("/config/reset")
+    public Result<AiConfigVO> resetConfig(@RequestParam String key) {
+        return Result.success(aiConfigService.reset(key, UserContext.getUserId()));
+    }
+
+    /** 用示例变量预览渲染结果，便于运营在保存前确认占位符替换是否正确（不调用模型，不产生费用） */
+    @GetMapping("/config/preview")
+    public Result<Map<String, Object>> previewConfig(@RequestParam String key,
+                                                     @RequestParam(defaultValue = "3") String productCount,
+                                                     @RequestParam(defaultValue = "找商品") String intentLabel) {
+        Map<String, String> vars = new LinkedHashMap<>();
+        vars.put("productCount", productCount);
+        vars.put("intentLabel", intentLabel);
+        return Result.success(aiConfigService.preview(key, vars));
     }
 }

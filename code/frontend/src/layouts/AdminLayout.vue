@@ -88,6 +88,16 @@
               <el-icon><TrendCharts /></el-icon><span>AI 运营增长报告</span>
             </el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="cfg">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>AI 配置中心</span>
+            </template>
+            <el-menu-item index="/admin/ai/config">
+              <el-icon><EditPen /></el-icon><span>提示词与参数</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>

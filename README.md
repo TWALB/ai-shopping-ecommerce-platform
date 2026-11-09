@@ -94,9 +94,9 @@ DROP DATABASE IF EXISTS `digital_mall`;
 - 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → AI 知识库（RAG） → 商品知识库」点「全量重建向量」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
 - 召回策略：**先硬约束过滤、再语义排序**。对比类问题优先精确匹配用户点名的机型/品牌；找商品类先按「品类 → 预算上限（超 20% 剔除）」过滤候选集，再按「关键词同义词 → 品牌 → 销量微调」打分；向量通路在排序前应用同一套硬约束。过滤后为空即如实告知「没有符合条件的商品」，不凑数
 
-## 管理端 AI 模块（知识库 RAG / 智能导购与运营）
+## 管理端 AI 模块（知识库 RAG / 智能导购与运营 / 配置中心）
 
-管理后台左侧菜单按三组组织：平台运营、AI 知识库（RAG）、AI 智能导购与运营。AI 两组共 10 个页面，全部读取现有表与 Redis 向量索引，**不新增数据库表**。
+管理后台左侧菜单按四组组织：平台运营、AI 知识库（RAG）、AI 智能导购与运营、AI 配置中心。AI 前三组共 10 个页面，读取现有表与 Redis 向量索引，不新增业务表；配置中心使用独立的 `sys_ai_config` 表（见下）。
 
 | 页面 | 路由 | 数据来源 | 能回答的问题 |
 |---|---|---|---|
@@ -110,11 +110,31 @@ DROP DATABASE IF EXISTS `digital_mall`;
 | AI 商品问答 | `/admin/ai/qa` | 提问 + 紧随其后的回答 | 高频问题与回答缺陷 |
 | AI 评价分析 | `/admin/ai/comment` | comment（规则统计） | 评分分布、差评关键词、未回复数 |
 | AI 运营增长报告 | `/admin/ai/report` | chat_session / chat_message / order | 会话数、转化率、每日趋势、意图分布 |
+| 提示词与参数 | `/admin/ai/config` | sys_ai_config | 提示词当前版本、默认值、可用变量、保存记录 |
 
 - 后端入口：`AdminAiController`（`/api/admin/ai/**`，`@RequireRole(ADMIN)`）+ `AdminAiService`
 - 检索页复用线上链路（`IntentService.recognize` → `ProductRetrievalService.retrieve`），因此「页面上看到的召回结果」与商城端用户看到的一致
 - 向量未同步或未配置 Key 时，页面会显式标注「已降级为本地结构化召回」，不隐藏降级行为
 - 冒烟脚本：`python scripts/verify-admin-ai.py`（登录后依次调用 10 个接口并打印关键字段）
+
+## AI 配置中心（提示词热更新）
+
+提示词属于运营资产，不应该写死在代码里。`sys_ai_config` 表 + `AiConfigService` 提供「改文案 → 保存 → 下一个请求生效」的闭环，**不需要重编译、不需要重启**。
+
+| 配置键 | 作用 | 可用变量 |
+|---|---|---|
+| `chat.system_prompt` | 导购回答的系统提示词（怎么说） | `{{productCount}}` 本次召回件数、`{{intentLabel}}` 意图中文名 |
+| `intent.system_prompt` | 意图识别的系统提示词（怎么抽槽位） | — |
+| `chat.attr_limit` | 每个商品注入给模型的参数条数（1–12） | — |
+
+设计要点：
+
+- **保存即生效**：写库后同步刷新本地缓存，读路径零 DB 往返；配置缺失或读库异常时自动回落到代码内置默认值，导购功能不因配置故障中断
+- **可回滚**：每行都存 `default_value`，管理端「恢复默认」一键复原，`version` 每次保存自增，可追溯改了几版
+- **占位符只做字符串替换**：不引入模板引擎，避免运营改动带来执行风险；预览接口用示例变量渲染，不调用模型、不产生费用
+- **建表自愈**：应用启动时执行 `CREATE TABLE IF NOT EXISTS` 并播种默认值（DDL 存档于 `code/backend/src/main/resources/db/sys_ai_config.sql`），新环境无需手工建表
+- **参数注入**：`ChatServiceImpl` 组装上下文时批量查询 `product_attr`（一次 IN 查询后按商品分组），每件商品注入前 N 条参数。此前上下文只有名称/价格/销量，而提示词要求「参数对比用表格」，模型拿不到参数只能编造——这是「参考对比必翻车」的根因，现已修复
+
 
 ## 导购检索评测（可复现）
 

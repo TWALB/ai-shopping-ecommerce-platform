@@ -62,7 +62,9 @@ const routes = [
       { path: 'ai/guide/recommend', component: () => import('../views/admin/AiRecommend.vue'), meta: { title: 'AI 推荐商品' } },
       { path: 'ai/qa', component: () => import('../views/admin/AiQa.vue'), meta: { title: 'AI 商品问答' } },
       { path: 'ai/comment', component: () => import('../views/admin/AiCommentAnalysis.vue'), meta: { title: 'AI 评价分析' } },
-      { path: 'ai/report', component: () => import('../views/admin/AiReport.vue'), meta: { title: 'AI 运营增长报告' } }
+      { path: 'ai/report', component: () => import('../views/admin/AiReport.vue'), meta: { title: 'AI 运营增长报告' } },
+      // AI 配置中心
+      { path: 'ai/config', component: () => import('../views/admin/AiConfig.vue'), meta: { title: '提示词与参数' } }
     ]
   }
 ]
