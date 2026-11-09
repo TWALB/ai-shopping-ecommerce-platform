@@ -10,92 +10,16 @@
       </div>
 
       <el-scrollbar class="menu-scroll">
-        <el-menu :default-active="activeMenu" :default-openeds="['ops', 'kb', 'ai']" router class="menu">
-          <el-sub-menu index="ops">
+        <el-menu :default-active="activeMenu" :default-openeds="openeds" router class="menu"
+                 @open="onOpen" @close="onClose">
+          <el-sub-menu v-for="group in adminMenu" :key="group.key" :index="group.key">
             <template #title>
-              <el-icon><DataAnalysis /></el-icon>
-              <span>平台运营</span>
+              <el-icon><component :is="group.icon" /></el-icon>
+              <span>{{ group.title }}</span>
             </template>
-            <el-menu-item index="/admin?tab=stats">
-              <el-icon><Odometer /></el-icon><span>数据总览</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=users">
-              <el-icon><User /></el-icon><span>用户管理</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=applies">
-              <el-icon><Shop /></el-icon><span>入驻审核</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=products">
-              <el-icon><Goods /></el-icon><span>商品管理</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=orders">
-              <el-icon><Tickets /></el-icon><span>订单管理</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=aftersales">
-              <el-icon><Service /></el-icon><span>售后管理</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=notices">
-              <el-icon><Bell /></el-icon><span>公告管理</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=comments">
-              <el-icon><ChatLineSquare /></el-icon><span>评价审核</span>
-            </el-menu-item>
-            <el-menu-item index="/admin?tab=logs">
-              <el-icon><Document /></el-icon><span>操作日志</span>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="kb">
-            <template #title>
-              <el-icon><Reading /></el-icon>
-              <span>AI 知识库（RAG）</span>
-            </template>
-            <el-menu-item index="/admin/ai/knowledge/products">
-              <el-icon><Collection /></el-icon><span>商品知识库</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/knowledge/chunks">
-              <el-icon><Files /></el-icon><span>商品知识切片</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/knowledge/search">
-              <el-icon><Search /></el-icon><span>Embedding 检索</span>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="ai">
-            <template #title>
-              <el-icon><MagicStick /></el-icon>
-              <span>AI 智能导购与运营</span>
-            </template>
-            <el-menu-item index="/admin/ai/guide/tasks">
-              <el-icon><ChatDotRound /></el-icon><span>AI 智能导购任务</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/guide/runs">
-              <el-icon><VideoPlay /></el-icon><span>Agent Run 运行记录</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/guide/steps">
-              <el-icon><SetUp /></el-icon><span>Agent Step 执行步骤</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/guide/recommend">
-              <el-icon><Star /></el-icon><span>AI 推荐商品</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/qa">
-              <el-icon><ChatLineSquare /></el-icon><span>AI 商品问答</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/comment">
-              <el-icon><DataLine /></el-icon><span>AI 评价分析</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/ai/report">
-              <el-icon><TrendCharts /></el-icon><span>AI 运营增长报告</span>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="cfg">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>AI 配置中心</span>
-            </template>
-            <el-menu-item index="/admin/ai/config">
-              <el-icon><EditPen /></el-icon><span>提示词与参数</span>
+            <el-menu-item v-for="item in group.children" :key="item.path" :index="item.path">
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span>{{ item.title }}</span>
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -105,9 +29,10 @@
     <el-container>
       <el-header class="header">
         <div class="crumb">
-          <span class="root">管理后台</span>
-          <el-icon class="sep"><ArrowRight /></el-icon>
-          <span class="cur">{{ pageTitle }}</span>
+          <template v-for="(seg, i) in chain" :key="i">
+            <el-icon v-if="i > 0" class="sep"><ArrowRight /></el-icon>
+            <span :class="i === chain.length - 1 ? 'cur' : 'root'">{{ seg }}</span>
+          </template>
         </div>
         <div class="user-area">
           <span class="user-name">{{ userStore.userInfo?.nickname || userStore.userInfo?.username }}</span>
@@ -122,40 +47,46 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { getMe, logout as logoutApi } from '../api/auth'
+import { adminMenu, DEFAULT_OPENED, resolveMenuPath, resolveChain } from './menuConfig'
+
+const OPEN_KEY = 'admin_menu_opened'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const TAB_TITLES = {
-  stats: '数据总览',
-  users: '用户管理',
-  applies: '入驻审核',
-  products: '商品管理',
-  orders: '订单管理',
-  aftersales: '售后管理',
-  notices: '公告管理',
-  comments: '评价审核',
-  logs: '操作日志'
+/** 展开态持久化：刷新后保持上次的样子，侧栏不会每次全展开 */
+const openeds = ref(readOpened())
+
+function readOpened() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(OPEN_KEY) || 'null')
+    return Array.isArray(saved) ? saved : [...DEFAULT_OPENED]
+  } catch (e) {
+    return [...DEFAULT_OPENED]
+  }
 }
 
-const activeMenu = computed(() => {
-  if (route.path.startsWith('/admin/ai')) {
-    return route.path
-  }
-  return `/admin?tab=${route.query.tab || 'stats'}`
-})
+function persistOpened(list) {
+  openeds.value = list
+  localStorage.setItem(OPEN_KEY, JSON.stringify(list))
+}
 
-const pageTitle = computed(() => {
-  if (route.path.startsWith('/admin/ai')) {
-    return route.meta.title || 'AI 模块'
-  }
-  return TAB_TITLES[route.query.tab || 'stats'] || '数据总览'
-})
+function onOpen(index) {
+  if (!openeds.value.includes(index)) persistOpened([...openeds.value, index])
+}
+
+function onClose(index) {
+  persistOpened(openeds.value.filter((k) => k !== index))
+}
+
+const activeMenu = computed(() => resolveMenuPath(route.path, route.query))
+
+const chain = computed(() => resolveChain(activeMenu.value))
 
 onMounted(async () => {
   try {

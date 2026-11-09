@@ -63,8 +63,20 @@ const routes = [
       { path: 'ai/qa', component: () => import('../views/admin/AiQa.vue'), meta: { title: 'AI 商品问答' } },
       { path: 'ai/comment', component: () => import('../views/admin/AiCommentAnalysis.vue'), meta: { title: 'AI 评价分析' } },
       { path: 'ai/report', component: () => import('../views/admin/AiReport.vue'), meta: { title: 'AI 运营增长报告' } },
-      // AI 配置中心
-      { path: 'ai/config', component: () => import('../views/admin/AiConfig.vue'), meta: { title: '提示词与参数' } }
+      // AI 基础配置
+      { path: 'ai/model', component: () => import('../views/admin/AiModel.vue'), meta: { title: 'AI 模型配置' } },
+      { path: 'ai/prompt', component: () => import('../views/admin/AiPrompt.vue'), meta: { title: 'Prompt 模板' } },
+      { path: 'ai/tool', component: () => import('../views/admin/AiTools.vue'), meta: { title: 'Function Tool' } },
+      {
+        path: 'ai/tool/debug/product',
+        component: () => import('../views/admin/ToolDebugger.vue'),
+        meta: { title: '商品工具调试', domain: 'product' }
+      },
+      {
+        path: 'ai/tool/debug/biz',
+        component: () => import('../views/admin/ToolDebugger.vue'),
+        meta: { title: '业务工具调试', domain: 'biz' }
+      }
     ]
   }
 ]
