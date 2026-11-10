@@ -5,53 +5,71 @@
 ## 目录结构
 ```
 大模型导购的数码电商平台/
-├── README.md                          本文件（项目总览）
+├── README.md                          本文件（项目总览 + 从零启动清单）
 │
-├── 开题报告-翁宇.docx                  开题报告原件
-├── 开题报告内容.txt                    开题报告纯文本（检索用）
+├── docs/                               设计与文档
+│   ├── 数码电商平台-数据库ER图.html       数据库 ER 图（浏览器直接打开）
+│   ├── 数码电商平台-后端接口文档.html     后端 REST API 文档（81 个接口，可搜索）
+│   └── _交易模块接口提取.txt             接口文档的纯文本抽取（便于检索与引用）
 │
-├── 数码电商平台-数据库建表SQL.sql       MySQL 建表脚本（24张表+初始数据）
-├── 数码电商平台-数据库ER图.html         数据库 ER 图（浏览器打开）
-├── 数码电商平台-后端接口文档.html       后端 REST API 文档（81个接口，可搜索）
-├── 测试商品数据.sql                     8件测试商品（含SKU/参数/图片）
+├── db/                                 MySQL 脚本（按 README 里的顺序执行）
+│   ├── README.md                       执行顺序、重置方法、常见报错
+│   ├── 数码电商平台-数据库建表SQL.sql     24 业务表 + 2 张 AI 表 + 分类/品牌/账号
+│   ├── 测试商品数据.sql                  8 件测试商品（含 SKU/参数/图片）
+│   ├── sys_ai_config.sql               AI 配置表 DDL 存档（启动自建，手工建库才需要）
+│   └── sys_ai_tool.sql                 AI 工具注册表 DDL + 5 个内置工具（同上）
 │
-├── 验证-建表SQL.py / 验证-ER图HTML.py / 验证-接口文档.py / 验证-测试数据SQL.py   产物校验脚本
-├── scripts/eval-report.py             读取评测结果 JSON，生成 deliverables/导购检索评测报告.md
+├── deliverables/                       交付物
+│   ├── 导购检索评测报告.md               60 条标注集上的三通路对照（含修复前后）
+│   └── qa/                             阶段性 QA 归档（测试报告、安全审计、上线检查、修复前快照）
 │
-└── code/                              前后端工程代码
+├── scripts/                            工具脚本
+│   ├── eval-report.py                  读评测 JSON → 生成 deliverables 报告
+│   ├── verify-admin-ai.py              管理端 AI 接口冒烟
+│   ├── 验证-测试数据SQL.py              校验测试商品数据的完整性
+│   └── archive/                        已停用的历史脚本（保留备查）
+│
+└── code/                               前后端工程代码
     ├── backend/       Spring Boot 3 + MyBatis-Plus + Redis + JWT
     │                   ├ 认证闭环 ✓ 商品模块 ✓ 交易闭环（购物车/订单/支付/地址）✓
+    │                   ├ AI 导购：意图识别 → 硬约束召回 → SSE 流式生成
+    │                   ├ AI 运营端：配置热更新（sys_ai_config）+ 工具注册表（sys_ai_tool）
     │                   ├ 其余为按接口文档建好的骨架（README 见 code/backend/README.md）
     │                   └ src/main/resources/eval/retrieval-eval.json  60 条带标注的检索评测集
     └── frontend/      Vue3 + Vite + Element Plus + Pinia
                         ├ 登录/注册/首页/商品/详情/导购聊天/购物车/结算/订单 已就绪（README 见 code/frontend/README.md）
                         ├ 三端分离：商城(MainLayout，仅用户) / 商家工作台(MerchantLayout) / 管理后台(AdminLayout)
-                        ├ 登录后按角色自动跳转各自端首页；越权访问提示无权限并回跳
+                        └ 登录后按角色自动跳转各自端首页；越权访问提示无权限并回跳
 ```
+
+> 根目录只保留 `README.md`、四个资料目录（`docs` / `db` / `deliverables` / `scripts`）与 `code`。
+> 新增文档放 `docs/`、SQL 放 `db/`、一次性脚本放 `scripts/archive/`，根目录不再堆文件。
 
 ## 技术栈
 - 前端：Vue 3 · Vite · Element Plus · Pinia · Axios
 - 后端：Spring Boot 3.2 · Java 17+ · MyBatis-Plus · MySQL · Redis · JWT
 - 核心特色：大模型智能导购（LLM + 商品知识库向量检索 + SSE 流式对话）
 
-## 快速启动
-1. MySQL 执行 `数码电商平台-数据库建表SQL.sql`
-   （建表 24 张 + 分类/品牌/管理员账号；admin 密码已内置可用的 BCrypt 密文）
-2. **MySQL 执行 `测试商品数据.sql`**
-   （8 件商品 + 1 个店铺 + 商家账号 merchant1）
+## 从零启动清单
 
-   > ⚠️ **这一步不能跳过**：建表 SQL 里没有任何商品数据。不执行则首页/商品列表为空，
-   > 智能导购会一律回答"抱歉，暂时没有完全匹配的商品"——核心功能看起来像坏了。
-   > ⚠️ 该脚本**只能执行一次**（含唯一键约束，重复执行会报 Duplicate entry）。
-   > 需要重跑请先 `DROP DATABASE digital_mall;` 重建，见「重置数据库」一节。
+按顺序走完这 7 步即可跑起来。每步都写了「怎么确认成功」，失败时不用猜。
 
-3. 启动 Redis
-4. 后端配置：
-   `cd code/backend/src/main/resources && Copy-Item application-local.yml.example application-local.yml`
-   在生成的文件里填入自己的大模型 Key（**不填也能启动**，导购自动走本地检索降级模式）
-5. 后端启动：`cd code/backend && mvn spring-boot:run`（端口 8080）
-6. 前端：`cd code/frontend && npm install && npm run dev`（端口 5173）
-7. 浏览器打开 http://localhost:5173
+| # | 做什么 | 怎么确认成功 |
+|---|---|---|
+| 1 | 建库建表：MySQL 执行 `db/数码电商平台-数据库建表SQL.sql` | `USE digital_mall; SHOW TABLES;` 有 26 张表（24 业务 + 2 AI） |
+| 2 | **导入商品数据**：执行 `db/测试商品数据.sql` | `SELECT COUNT(*) FROM product;` 返回 8 |
+| 3 | 启动 Redis | 日志无 `RedisConnectionFailureException`；登录能拿到 token |
+| 4 | 配大模型 Key：`cd code/backend/src/main/resources && cp application-local.yml.example application-local.yml`，填入 `llm.api-key` | 不填也能启动，导购自动降级为本地检索 |
+| 5 | 启后端：`cd code/backend && mvn spring-boot:run` | 控制台出现 `Tomcat started on port 8080`；`GET /api/products` 有数据 |
+| 6 | 启前端：`cd code/frontend && npm install && npm run dev` | 控制台给出 `http://localhost:5173` |
+| 7 | 浏览器打开 http://localhost:5173 | 首页能看到 8 件商品 |
+
+> ⚠️ **第 2 步不能跳过**：建表 SQL 里没有任何商品数据。不执行则首页/商品列表为空，
+> 智能导购会一律回答"抱歉，暂时没有完全匹配的商品"——核心功能看起来像坏了。
+> ⚠️ 该脚本**只能执行一次**（含唯一键约束，重复执行会报 Duplicate entry）。
+> 需要重跑请先 `DROP DATABASE digital_mall;` 重建，见「重置数据库」一节。
+> ⚠️ AI 的两张表（`sys_ai_config` / `sys_ai_tool`）**不用手工建**，应用启动时自动建表并播种；
+> `db/` 下的同名 SQL 只是 DDL 存档，供论文附录或纯手工建库使用。
 
 ### 演示账号
 
@@ -91,12 +109,21 @@ DROP DATABASE IF EXISTS `digital_mall`;
 - 链路：意图识别（find_product / compare / recommend / chat + 槽位）→ 商品召回（Top5）→ 组装 Prompt → 流式生成 → 落库
 - 接口：`POST /api/chat/send`（SSE，事件序列 `intent` → `products` → `answer`（delta 增量）→ `done`）；会话与历史：`/api/chat/session`、`/api/chat/session/page`、`/api/chat/message/page`
 - 双模式：未提供真实 Key（`application.yml` 中保持占位符、`application-local.yml` 未配置）时自动降级为「规则意图识别 + 本地结构化召回 + 模板分段推送」，无网络也能完整演示；填入真实 Key（豆包方舟或任意 OpenAI 兼容端点）后切换为「Embedding 向量召回 + LLM 流式生成」
-- 启用真实大模型：在 `application-local.yml` 填入 `llm.base-url`、`llm.api-key`、`llm.model`、`llm.embedding-model`（或设置同名环境变量）后重启后端，管理员在「管理端 → AI 知识库（RAG） → 商品知识库」点「全量重建向量」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
+- 启用真实大模型：两种方式二选一——① 在 `application-local.yml` 填 `llm.*`（或设同名环境变量）后重启；② 直接在「管理端 → AI 基础配置 → AI 模型配置」填 Key 并保存，**无需重启**（WebClient 按签名重建）。随后到「AI 知识库（RAG） → 商品知识库」点「全量重建向量」执行向量化（Redis 键 `product:embedding:{id}`，TTL 7 天）
 - 召回策略：**先硬约束过滤、再语义排序**。对比类问题优先精确匹配用户点名的机型/品牌；找商品类先按「品类 → 预算上限（超 20% 剔除）」过滤候选集，再按「关键词同义词 → 品牌 → 销量微调」打分；向量通路在排序前应用同一套硬约束。过滤后为空即如实告知「没有符合条件的商品」，不凑数
 
-## 管理端 AI 模块（知识库 RAG / 智能导购与运营 / 配置中心）
+## 管理端 AI 模块（知识库 RAG / 智能导购与运营 / 基础配置）
 
-管理后台左侧菜单按四组组织：平台运营、AI 知识库（RAG）、AI 智能导购与运营、AI 配置中心。AI 前三组共 10 个页面，读取现有表与 Redis 向量索引，不新增业务表；配置中心使用独立的 `sys_ai_config` 表（见下）。
+管理后台左侧菜单按四组组织，前两组回答「AI 现在看到了什么」，第三组回答「AI 用起来怎么样」，第四组才是「AI 怎么被配置」：
+
+| 分组 | 定位 | 页面数 |
+|---|---|---|
+| 平台运营 | 与 AI 无关的常规后台 | 9 |
+| AI 知识库（RAG） | 向量库与切片的可观测性 | 3 |
+| AI 智能导购与运营 | 会话、召回、问答、增长分析 | 7 |
+| AI 基础配置 | 模型、提示词、工具（改这里会改变 AI 行为） | 5 |
+
+**为什么把「配置」单独抽一组**：前三组是只读观测，改坏了不影响线上；第四组每次保存都会改变导购行为，混在业务菜单里容易被误点。分开之后，「看数据」和「改行为」在视觉上就是两件事。
 
 | 页面 | 路由 | 数据来源 | 能回答的问题 |
 |---|---|---|---|
@@ -110,30 +137,73 @@ DROP DATABASE IF EXISTS `digital_mall`;
 | AI 商品问答 | `/admin/ai/qa` | 提问 + 紧随其后的回答 | 高频问题与回答缺陷 |
 | AI 评价分析 | `/admin/ai/comment` | comment（规则统计） | 评分分布、差评关键词、未回复数 |
 | AI 运营增长报告 | `/admin/ai/report` | chat_session / chat_message / order | 会话数、转化率、每日趋势、意图分布 |
-| 提示词与参数 | `/admin/ai/config` | sys_ai_config | 提示词当前版本、默认值、可用变量、保存记录 |
+| AI 模型配置 | `/admin/ai/model` | sys_ai_config（`model.*`） | 现在用哪个模型、Key 是否有效、向量维度对不对得上 |
+| Prompt 模板 | `/admin/ai/prompt` | sys_ai_config（chat/intent） | 提示词当前版本、默认值、可用变量 |
+| Function Tool | `/admin/ai/tool` | sys_ai_tool | 模型能调用哪些工具、参数长什么样、是否启用 |
+| 商品工具调试 | `/admin/ai/tool/debug/product` | 调用真实检索服务 | 给定参数会返回什么商品 |
+| 业务工具调试 | `/admin/ai/tool/debug/biz` | 调用真实订单/物流 | 订单状态、物流轨迹对不对 |
 
-- 后端入口：`AdminAiController`（`/api/admin/ai/**`，`@RequireRole(ADMIN)`）+ `AdminAiService`
+- 后端入口：`AdminAiController`（观测类，`/api/admin/ai/**`）+ `AdminAiBaseController`（配置类，`/api/admin/ai/model|prompt|tools`），均标注 `@RequireRole(ADMIN)`
 - 检索页复用线上链路（`IntentService.recognize` → `ProductRetrievalService.retrieve`），因此「页面上看到的召回结果」与商城端用户看到的一致
 - 向量未同步或未配置 Key 时，页面会显式标注「已降级为本地结构化召回」，不隐藏降级行为
-- 冒烟脚本：`python scripts/verify-admin-ai.py`（登录后依次调用 10 个接口并打印关键字段）
+- 菜单配置化：`frontend/src/layouts/menuConfig.js` 一处定义，侧栏、选中态、面包屑、展开态（localStorage `admin_menu_opened`）都从这份数组推导，加页面只改数据
+- 冒烟脚本：`python scripts/verify-admin-ai.py`（登录后依次调用观测类接口并打印关键字段）
 
-## AI 配置中心（提示词热更新）
+## AI 基础配置（模型 / 提示词 / 工具）
 
-提示词属于运营资产，不应该写死在代码里。`sys_ai_config` 表 + `AiConfigService` 提供「改文案 → 保存 → 下一个请求生效」的闭环，**不需要重编译、不需要重启**。
+这三项的共同前提是：**它们是运营资产，不是代码常量**。改完保存，下一个请求就生效，不重编译、不重启。
+
+### 1. 模型配置（`model.*`）
+
+| 配置键 | 作用 | 备注 |
+|---|---|---|
+| `model.base_url` | OpenAI 兼容端点 | 换供应商只改这里 |
+| `model.api_key` | 密钥 | **只写不读**：接口返回 `sk-w****b-2Q`，提交回掩码视为未修改 |
+| `model.name` | 对话模型名 | |
+| `model.embedding_model` | 向量模型名 | 换它会导致存量向量维度失配，页面会告警 |
+| `model.temperature` | 采样温度 | 导购建议 0.2–0.5 |
+
+关键实现是**热切换**：`LlmClient` 按 `baseUrl|apiKey` 计算签名缓存 `WebClient`，签名变了就重建，所以保存后下一次对话直接用新模型。第一版把 `WebClient` 在构造时创建一次，改库只改了配置文件、实际请求还走旧端点——这类"看起来保存成功"的坑最难查，所以单独加了「连通性自检」按钮：真发一次对话 + 一次向量化，把耗时、返回维度、是否与存量向量维度一致都打出来。
+
+### 2. Prompt 模板
 
 | 配置键 | 作用 | 可用变量 |
 |---|---|---|
 | `chat.system_prompt` | 导购回答的系统提示词（怎么说） | `{{productCount}}` 本次召回件数、`{{intentLabel}}` 意图中文名 |
 | `intent.system_prompt` | 意图识别的系统提示词（怎么抽槽位） | — |
-| `chat.attr_limit` | 每个商品注入给模型的参数条数（1–12） | — |
 
 设计要点：
 
 - **保存即生效**：写库后同步刷新本地缓存，读路径零 DB 往返；配置缺失或读库异常时自动回落到代码内置默认值，导购功能不因配置故障中断
 - **可回滚**：每行都存 `default_value`，管理端「恢复默认」一键复原，`version` 每次保存自增，可追溯改了几版
 - **占位符只做字符串替换**：不引入模板引擎，避免运营改动带来执行风险；预览接口用示例变量渲染，不调用模型、不产生费用
-- **建表自愈**：应用启动时执行 `CREATE TABLE IF NOT EXISTS` 并播种默认值（DDL 存档于 `code/backend/src/main/resources/db/sys_ai_config.sql`），新环境无需手工建表
-- **参数注入**：`ChatServiceImpl` 组装上下文时批量查询 `product_attr`（一次 IN 查询后按商品分组），每件商品注入前 N 条参数。此前上下文只有名称/价格/销量，而提示词要求「参数对比用表格」，模型拿不到参数只能编造——这是「参考对比必翻车」的根因，现已修复
+- **参数注入**：`ChatServiceImpl` 组装上下文时批量查询 `product_attr`（一次 IN 查询后按商品分组），每件商品注入前 N 条参数（`chat.attr_limit`，1–12）。此前上下文只有名称/价格/销量，而提示词要求「参数对比用表格」，模型拿不到参数只能编造——这是「参考对比必翻车」的根因，现已修复
+- **密钥隔离**：`prompt` 接口会拦掉 `model.*` 场景，防止有人从模板页改密钥；`model` 接口则不返回明文
+
+### 3. Function Tool（工具注册表）
+
+`sys_ai_tool` 存的是「模型能看到什么」：`tool_code`（同时是 function name）、`description`（直接影响模型选不选它）、`params_schema`（JSON Schema，调试台据此自动生成表单）、`enabled`。真实执行绑定在 `AiToolInvoker` 的 Java 方法上，**管理端改不到执行目标**——否则等于把内部接口做成可配置项。
+
+内置 5 个工具：
+
+| tool_code | 域 | 实际读取 |
+|---|---|---|
+| `searchProduct` | product | `ProductRetrievalService`（与线上导购同一套召回） |
+| `getProductDetail` | product | product + product_attr |
+| `getPrice` | product | SKU 价格、库存、销量 |
+| `getOrderStatus` | biz | order（状态、金额、各时间节点） |
+| `getTrack` | biz | logistics + logistics_track |
+
+**边界要说清楚**：本轮只做到「注册表 + 调试台可跑通」，**没有接进对话主链路**。接进去需要改流式 `tool_calls` 的增量参数拼接与多轮回环（把 `role=tool` 的结果再发一次），会动到导购核心链路，且必须重跑那套 60 条评测确认无回退。页面上已标注此状态，避免误以为已接通。
+
+<details>
+<summary>为什么不接（技术取舍，答辩可直接引用）</summary>
+
+- SSE 下的工具回环要维护「一次请求内多轮模型调用」的中间状态，前端还要能渲染「正在调用 xx 工具」的临时态，复杂度陡增；
+- 现有链路的意图识别已经把商品类需求结构化，`searchProduct` 的结果可以直接由后端注入上下文，比让模型自己决定调工具**更稳定、更可测**；
+- 一旦接入，评测口径要从「槽位 → 召回」改成「工具选择 → 参数 → 结果」，60 条标注集需要重标，时间成本大于收益。
+
+</details>
 
 
 ## 导购检索评测（可复现）

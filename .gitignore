@@ -42,5 +42,3 @@ restart-backend*.log
 dev-server.log
 .playwright-cli/
 .workbuddy/
-unknow/
-/scripts/verify-admin-ai.py
